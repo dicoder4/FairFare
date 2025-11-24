@@ -1,24 +1,36 @@
 server:
   port: 3081
+
 spring:
   application:
     name: gateway-service
+
   cloud:
     gateway:
+      discovery:
+        locator:
+          enabled: true   # use eureka service names as routes automatically
+          lower-case-service-id: true
+
       routes:
-      - id: customerModule
-        uri: http://localhost:3001/
-        predicates:
-        - Path=/customers/**
-      - id: orderModule
-        uri: http://localhost:3002/
-        predicates:
-        - Path=/orders/**
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/users/**
+
+        - id: billing-service
+          uri: lb://billing-service
+          predicates:
+            - Path=/bills/**
+
+        - id: splitter-service
+          uri: lb://splitter-service
+          predicates:
+            - Path=/splits/**
+
 eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:3000/eureka
-  registerWithEureka:
-       - true
-  fetchRegistry:
-       - true
+    registerWithEureka: true
+    fetchRegistry: true
