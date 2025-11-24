@@ -12,15 +12,13 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 
 @Service
-public class SplitService {
-
-    @Autowired
+public class SplitService {    @Autowired
     private RestTemplate restTemplate;
 
     @Autowired
     private SplitResultRepository splitResultRepository;
 
-    private static final String BILLING_SERVICE_BASE_URL = "http://localhost:3081";
+    private static final String BILLING_SERVICE_BASE_URL = "http://localhost:3003";
 
     public SplitResult getOrCalculateSplit(String billId) {
         return splitResultRepository.findByBillId(billId)

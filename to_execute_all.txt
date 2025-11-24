@@ -1,22 +1,27 @@
-####open first command prompt
-cd customer_service
-mvnw spring-boot:run
-http://localhost:3001/customers
-http://localhost:3001/1
+####open first command prompt - Discovery Service
+cd discovery-service
+.\mvnw spring-boot:run
+# Wait for it to start, then check: http://localhost:3000
 
-####open second command prompt
-cd order_service
-mvnw spring-boot:run
-http://localhost:3002/orders
-http://localhost:3002/1
+####open second command prompt - User Service  
+cd user-service
+.\mvnw spring-boot:run
+# Test endpoints: http://localhost:3001/users
 
-####open third command prompt
-cd discovery_service
-mvnw spring-boot:run
-http://localhost:3000
+####open third command prompt - Billing Service
+cd billing-service
+.\mvnw spring-boot:run
+# Test endpoints: http://localhost:3003/bills
 
-####open fourth command prompt
-cd gateway_service
-mvnw spring-boot:run
-http://localhost:3081/customers
-http://localhost:3081/orders
+####open fourth command prompt - Splitter Service
+cd splitter-service
+.\mvnw spring-boot:run
+# Test endpoints: http://localhost:3002/splits
+
+####open fifth command prompt - Gateway Service
+.\mvnw spring-boot:run
+# Gateway routes: 
+# http://localhost:3081/users
+# http://localhost:3081/groups  
+# http://localhost:3081/bills
+# http://localhost:3081/splits
