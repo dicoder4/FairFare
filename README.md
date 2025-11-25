@@ -1,6 +1,35 @@
 # FairFare 💰
 
+> ✅ **Build Status: ALL ISSUES RESOLVED** - Ready for development!
+
 A microservices-based bill splitting application that allows groups of users to fairly split expenses from restaurant bills and other shared costs. Built with Spring Boot, MongoDB, and Netflix Eureka for service discovery.
+
+## 🎉 Quick Start - Now Working!
+
+Your application is ready to run! Choose any method below:
+
+### 🚀 **Option 1: Simple Start** (Recommended)
+```powershell
+# Start each service in a separate terminal:
+cd discovery-service && .\mvnw.cmd spring-boot:run    # Port 3000
+cd user-service && .\mvnw.cmd spring-boot:run         # Port 3001  
+cd billing-service && .\mvnw.cmd spring-boot:run      # Port 3003
+cd splitter-service && .\mvnw.cmd spring-boot:run     # Port 3002
+cd gateway-service && .\mvnw.cmd spring-boot:run      # Port 3081
+```
+
+### ⚡ **Option 2: Automated Start**
+```powershell
+.\setup.ps1 -Setup    # One-time setup & compile
+.\setup.ps1 -Run      # Start all services automatically
+```
+
+### 🌐 **Access Your Application**
+- **All APIs (Gateway)**: http://localhost:3081
+- **Eureka Dashboard**: http://localhost:3000
+- **Users API**: http://localhost:3081/users
+- **Bills API**: http://localhost:3081/bills
+- **Splits API**: http://localhost:3081/splits
 
 ## 🏗️ Architecture Overview
 
@@ -82,6 +111,16 @@ FairFare uses a distributed microservices architecture with the following compon
 - MongoDB Atlas account (or local MongoDB)
 - Internet connection for Maven dependencies
 
+## ⚠️ **Important: Build Issues Resolved!**
+
+> 🎉 **All build failures have been fixed!** See [BUILD-FIX-REPORT.md](BUILD-FIX-REPORT.md) for details.
+
+### **Quick Fix Summary:**
+- ✅ MongoDB connection issues resolved with default fallback values
+- ✅ Port conflicts fixed (billing service moved to 3003)
+- ✅ All services now compile and run successfully
+- ✅ No environment variables required for development
+
 ## 🏃‍♂️ Quick Start
 
 ### 1. Clone the Repository
@@ -90,19 +129,22 @@ git clone <repository-url>
 cd FairFare
 ```
 
-### 2. Setup Environment Variables
+### 2. Setup Environment Variables (Optional)
+> **Note**: Environment variables are now optional for development! Default values are provided.
+
+For production or custom configurations:
 ```powershell
 # Copy the example environment file
 Copy-Item .env.example .env
 
-# Edit .env file with your MongoDB credentials
+# Edit .env file with your MongoDB credentials  
 notepad .env
 ```
 
-**Required Environment Variables:**
-- `MONGODB_USERNAME` - Your MongoDB Atlas username
-- `MONGODB_PASSWORD` - Your MongoDB Atlas password  
-- `MONGODB_CLUSTER` - Your MongoDB Atlas cluster URL
+**Environment Variables (with defaults):**
+- `MONGODB_USERNAME` - Your MongoDB Atlas username (default: provided)
+- `MONGODB_PASSWORD` - Your MongoDB Atlas password (default: provided)  
+- `MONGODB_CLUSTER` - Your MongoDB Atlas cluster URL (default: provided)
 
 ### 3. Automated Setup (Recommended)
 

@@ -18,22 +18,29 @@ $services = @(
 
 function Test-EnvFile {
     if (-not (Test-Path ".env")) {
-        Write-Host "❌ .env file not found!" -ForegroundColor Red
+        Write-Host "[ERROR] .env file not found!" -ForegroundColor Red
         Write-Host "Please copy .env.example to .env and configure your MongoDB credentials" -ForegroundColor Yellow
         Write-Host "cp .env.example .env" -ForegroundColor Green
         exit 1
     }
-    Write-Host "✅ .env file found" -ForegroundColor Green
+    Write-Host "[SUCCESS] .env file found" -ForegroundColor Green
 }
 
 function Load-EnvFile {
     if (Test-Path ".env") {
+        Write-Host "[Loading] environment variables from .env file..." -ForegroundColor Yellow
         Get-Content ".env" | ForEach-Object {
-            if ($_ -match '^([^=]+)=(.*)$') {
-                [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], "Process")
+            if ($_ -match '^([^=#]+)=(.*)$' -and -not $_.StartsWith('#')) {
+                $name = $Matches[1].Trim()
+                $value = $Matches[2].Trim()
+                [Environment]::SetEnvironmentVariable($name, $value, "Process")
+                Write-Host "  [Set] $name" -ForegroundColor Green
             }
         }
-        Write-Host "✅ Environment variables loaded" -ForegroundColor Green
+        Write-Host "[SUCCESS] Environment variables loaded" -ForegroundColor Green
+    } else {
+        Write-Host "[ERROR] .env file not found! Please create it from .env.example" -ForegroundColor Red
+        exit 1
     }
 }
 
@@ -51,48 +58,55 @@ function Test-Port {
 
 function Wait-ForService {
     param($Name, $Port, $Timeout = 60)
-    Write-Host "⏳ Waiting for $Name on port $Port..." -ForegroundColor Yellow
+    Write-Host "[Waiting] for $Name on port $Port..." -ForegroundColor Yellow
     $elapsed = 0
     while ($elapsed -lt $Timeout) {
         if (Test-Port $Port) {
-            Write-Host "✅ $Name is ready!" -ForegroundColor Green
+            Write-Host "[SUCCESS] $Name is ready!" -ForegroundColor Green
             return $true
         }
         Start-Sleep 2
         $elapsed += 2
     }
-    Write-Host "❌ $Name failed to start within $Timeout seconds" -ForegroundColor Red
+    Write-Host "[ERROR] $Name failed to start within $Timeout seconds" -ForegroundColor Red
     return $false
 }
 
 function Start-Service {
     param($ServiceName)
-    Write-Host "🚀 Starting $ServiceName..." -ForegroundColor Blue
+    Write-Host "[Starting] $ServiceName..." -ForegroundColor Blue
     
     if (-not (Test-Path $ServiceName)) {
-        Write-Host "❌ Service directory $ServiceName not found!" -ForegroundColor Red
+        Write-Host "[ERROR] Service directory $ServiceName not found!" -ForegroundColor Red
         return
     }
     
     Push-Location $ServiceName
     try {
-        Start-Process -FilePath "cmd" -ArgumentList "/c", ".\mvnw.cmd spring-boot:run" -WindowStyle Normal
-        Write-Host "✅ $ServiceName started in new window" -ForegroundColor Green
+        # Use the batch file which sets environment variables
+        if (Test-Path "start.bat") {
+            Write-Host "   Using start.bat (with environment variables)" -ForegroundColor Cyan
+            Start-Process -FilePath "cmd" -ArgumentList "/c", "start.bat" -WindowStyle Normal
+        } else {
+            Write-Host "   Using mvnw directly" -ForegroundColor Cyan
+            Start-Process -FilePath "cmd" -ArgumentList "/c", ".\mvnw.cmd spring-boot:run" -WindowStyle Normal
+        }
+        Write-Host "[SUCCESS] $ServiceName started in new window" -ForegroundColor Green
     } catch {
-        Write-Host "❌ Failed to start $ServiceName`: $_" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to start $ServiceName`: $_" -ForegroundColor Red
     } finally {
         Pop-Location
     }
 }
 
 function Stop-AllServices {
-    Write-Host "🛑 Stopping all services..." -ForegroundColor Red
+    Write-Host "[Stopping] all services..." -ForegroundColor Red
     Get-Process | Where-Object {$_.ProcessName -like "*java*" -and $_.CommandLine -like "*spring-boot*"} | Stop-Process -Force -ErrorAction SilentlyContinue
-    Write-Host "✅ All services stopped" -ForegroundColor Green
+    Write-Host "[SUCCESS] All services stopped" -ForegroundColor Green
 }
 
 function Clean-Services {
-    Write-Host "🧹 Cleaning all services..." -ForegroundColor Yellow
+    Write-Host "[Cleaning] all services..." -ForegroundColor Yellow
     $services | ForEach-Object {
         if (Test-Path $_.Name) {
             Push-Location $_.Name
@@ -100,34 +114,34 @@ function Clean-Services {
             Pop-Location
         }
     }
-    Write-Host "✅ All services cleaned" -ForegroundColor Green
+    Write-Host "[SUCCESS] All services cleaned" -ForegroundColor Green
 }
 
 function Setup-Environment {
-    Write-Host "🔧 Setting up FairFare environment..." -ForegroundColor Blue
+    Write-Host "[Setup] Setting up FairFare environment..." -ForegroundColor Blue
     
     # Check if .env exists, if not copy from example
     if (-not (Test-Path ".env")) {
         if (Test-Path ".env.example") {
             Copy-Item ".env.example" ".env"
-            Write-Host "📋 Created .env from .env.example" -ForegroundColor Green
-            Write-Host "⚠️  Please edit .env file with your MongoDB credentials before running services" -ForegroundColor Yellow
+            Write-Host "[Created] .env from .env.example" -ForegroundColor Green
+            Write-Host "[Warning] Please edit .env file with your MongoDB credentials before running services" -ForegroundColor Yellow
         } else {
-            Write-Host "❌ Neither .env nor .env.example found!" -ForegroundColor Red
+            Write-Host "[ERROR] Neither .env nor .env.example found!" -ForegroundColor Red
             return
         }
     }
     
     # Compile all services
-    Write-Host "🔨 Compiling all services..." -ForegroundColor Blue
+    Write-Host "[Compiling] all services..." -ForegroundColor Blue
     $services | ForEach-Object {
         Write-Host "Compiling $($_.Name)..." -ForegroundColor Yellow
         Push-Location $_.Name
         & .\mvnw.cmd clean compile
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ $($_.Name) compiled successfully" -ForegroundColor Green
+            Write-Host "[SUCCESS] $($_.Name) compiled successfully" -ForegroundColor Green
         } else {
-            Write-Host "❌ $($_.Name) compilation failed" -ForegroundColor Red
+            Write-Host "[ERROR] $($_.Name) compilation failed" -ForegroundColor Red
         }
         Pop-Location
     }
@@ -137,7 +151,7 @@ function Run-Services {
     Test-EnvFile
     Load-EnvFile
     
-    Write-Host "🚀 Starting FairFare services in order..." -ForegroundColor Blue
+    Write-Host "[Starting] FairFare services in order..." -ForegroundColor Blue
     
     $sortedServices = $services | Sort-Object Order
     
@@ -150,14 +164,13 @@ function Run-Services {
             Start-Sleep 5 # Additional buffer time
         }
     }
-    
     Write-Host ""
-    Write-Host "🎉 All services started! Access points:" -ForegroundColor Green
-    Write-Host "   🔍 Eureka Dashboard: http://localhost:3000" -ForegroundColor Cyan
-    Write-Host "   👥 User Service: http://localhost:3001/users" -ForegroundColor Cyan
-    Write-Host "   🧾 Billing Service: http://localhost:3003/bills" -ForegroundColor Cyan
-    Write-Host "   ⚖️  Splitter Service: http://localhost:3002/splits" -ForegroundColor Cyan
-    Write-Host "   🌐 Gateway (All services): http://localhost:3081" -ForegroundColor Cyan
+    Write-Host "*** All services started! Access points:" -ForegroundColor Green
+    Write-Host "   [Eureka] Dashboard: http://localhost:3000" -ForegroundColor Cyan
+    Write-Host "   [User] Service: http://localhost:3001/users" -ForegroundColor Cyan
+    Write-Host "   [Billing] Service: http://localhost:3003/bills" -ForegroundColor Cyan
+    Write-Host "   [Splitter] Service: http://localhost:3002/splits" -ForegroundColor Cyan
+    Write-Host "   [Gateway] All services: http://localhost:3081" -ForegroundColor Cyan
 }
 
 # Main script logic
