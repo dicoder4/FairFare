@@ -3,6 +3,7 @@
 
 param(
     [switch]$Setup,
+    [Alias("start")]
     [switch]$Run,
     [switch]$Stop,
     [switch]$Clean
@@ -151,19 +152,30 @@ function Run-Services {
     Test-EnvFile
     Load-EnvFile
     
-    Write-Host "[Starting] FairFare services in order..." -ForegroundColor Blue
+    Write-Host "[Starting] FairFare services..." -ForegroundColor Blue
     
-    $sortedServices = $services | Sort-Object Order
+    # Sort services numerically by the 'Order' property.
+    $sortedServices = $services | Sort-Object { [int]$_.Order }
     
+    # Verification step: Print the planned execution order
+    Write-Host "[INFO] Services will be started in the following order:" -ForegroundColor Cyan
+    $sortedServices | ForEach-Object { Write-Host "  -> $($_.Name) (Order: $($_.Order))" -ForegroundColor Cyan }
+
     foreach ($service in $sortedServices) {
         Start-Service $service.Name
         
-        # Wait for service to be ready before starting next one
-        if ($service.Order -lt 5) { # Don't wait for the last service
-            Wait-ForService $service.Name $service.Port
-            Start-Sleep 5 # Additional buffer time
+        # Wait for the service to be ready before starting the next one
+        if ($service.Order -lt ($services.Count)) { # Don't wait for the last service
+            if (Wait-ForService $service.Name $service.Port) {
+                Start-Sleep 3 # Additional buffer time
+            } else {
+                Write-Host "[FATAL] Service $($service.Name) failed to start. Aborting." -ForegroundColor Red
+                Stop-AllServices
+                return
+            }
         }
     }
+
     Write-Host ""
     Write-Host "*** All services started! Access points:" -ForegroundColor Green
     Write-Host "   [Eureka] Dashboard: http://localhost:3000" -ForegroundColor Cyan
@@ -183,16 +195,21 @@ if ($Setup) {
 } elseif ($Clean) {
     Clean-Services
 } else {
-    Write-Host "FairFare Management Script" -ForegroundColor Blue
-    Write-Host "=========================" -ForegroundColor Blue
-    Write-Host ""
-    Write-Host "Usage:"
-    Write-Host "  .\setup.ps1 -Setup    # Setup environment and compile services"
-    Write-Host "  .\setup.ps1 -Run      # Run all services in order"
-    Write-Host "  .\setup.ps1 -Stop     # Stop all services"
-    Write-Host "  .\setup.ps1 -Clean    # Clean all services"
-    Write-Host ""
-    Write-Host "Examples:"
-    Write-Host "  .\setup.ps1 -Setup"
-    Write-Host "  .\setup.ps1 -Run"
+    Write-Host @"
+FairFare Management Script
+=========================
+
+Usage:
+  .\setup.ps1 [command]
+
+Available Commands:
+  -Setup        Sets up the environment, creating the .env file and compiling all services.
+  -Run, -start  Loads environment variables and runs all microservices in the correct order.
+  -Stop         Stops all running Java processes related to the services.
+  -Clean        Cleans the Maven build artifacts for all services.
+
+Examples:
+  .\setup.ps1 -Setup
+  .\setup.ps1 -Run
+"@
 }

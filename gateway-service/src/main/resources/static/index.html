@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FairFare – Bill Splitter Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Optional: a tiny bit of styling -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        label {
+            display: block;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 6px 8px;
+            margin-top: 4px;
+            box-sizing: border-box;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 4px;
+            background: #3b82f6;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .output {
+            margin-top: 10px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            background: #f0f0f5;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 220px;
+            overflow: auto;
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background: #eef2ff;
+        }
+        .small {
+            font-size: 12px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>FairFare – Microservices Demo</h1>
+    <p class="small">
+        This UI talks to the <b>API Gateway</b> (port 3081), which routes requests to:
+        user-service (users & groups), billing-service (bills) and splitter-service (splits).
+    </p>
+
+    <!-- 1. USERS -->
+    <div class="card">
+        <h2>1. Create User (user-service)</h2>
+        <label>Name</label>
+        <input id="userName" placeholder="e.g. Alice">
+
+        <label>Email</label>
+        <input id="userEmail" placeholder="alice@example.com">
+
+        <label>Phone</label>
+        <input id="userPhone" placeholder="9999999999">
+
+        <button onclick="createUser()">Create User</button>
+        <button onclick="loadUsers()">Load All Users</button>
+
+        <div class="output" id="usersOutput"></div>
+    </div>
+
+    <!-- 2. GROUPS -->
+    <div class="card">
+        <h2>2. Create Group (user-service)</h2>
+        <p class="small">
+            Use user IDs from above. Enter comma-separated user IDs.
+        </p>
+        <label>Group Name</label>
+        <input id="groupName" placeholder="Goa Trip">
+
+        <label>Description</label>
+        <input id="groupDescription" placeholder="New Year Plan">
+
+        <label>Member IDs (comma-separated)</label>
+        <input id="groupMemberIds" placeholder="userId1,userId2">
+
+        <button onclick="createGroup()">Create Group</button>
+
+        <label style="margin-top: 12px;">Group ID (for viewing)</label>
+        <input id="groupIdView" placeholder="Paste created groupId here">
+        <button onclick="viewGroup()">View Group</button>
+
+        <div class="output" id="groupsOutput"></div>
+    </div>
+
+    <!-- 3. BILLING -->
+    <div class="card">
+        <h2>3. Create Bill (billing-service → user-service)</h2>
+        <p class="small">
+            This will call billing-service (via gateway), which internally calls user-service
+            to validate <code>groupId</code>.
+        </p>
+
+        <div class="two-column">
+            <div>
+                <label>Group ID</label>
+                <input id="billGroupId" placeholder="groupId from step 2">
+
+                <label>Created By (userId)</label>
+                <input id="billCreatedBy" placeholder="userId of payer">
+            </div>
+            <div>
+                <label>Tax</label>
+                <input id="billTax" type="number" value="50">
+
+                <label>Service Charge</label>
+                <input id="billService" type="number" value="20">
+
+                <label>Tip</label>
+                <input id="billTip" type="number" value="30">
+            </div>
+        </div>
+
+        <h3 style="font-size:15px;margin-top:12px;">Single Item (for demo)</h3>
+        <div class="two-column">
+            <div>
+                <label>Item Name</label>
+                <input id="itemName" placeholder="Pizza">
+            </div>
+            <div>
+                <label>Quantity</label>
+                <input id="itemQty" type="number" value="2">
+            </div>
+        </div>
+
+        <div class="two-column">
+            <div>
+                <label>Unit Price</label>
+                <input id="itemUnitPrice" type="number" value="200">
+            </div>
+            <div>
+                <label>Assigned User IDs (comma-separated)</label>
+                <input id="itemUserIds" placeholder="userId1,userId2">
+            </div>
+        </div>
+
+        <button onclick="createBill()">Create Bill</button>
+
+        <label style="margin-top:12px;">Bill ID (for viewing / splitting)</label>
+        <input id="billIdView" placeholder="Paste created billId here">
+        <button onclick="viewBill()">View Bill</button>
+
+        <div class="output" id="billingOutput"></div>
+    </div>
+
+    <!-- 4. SPLIT -->
+    <div class="card">
+        <h2>4. View Split (splitter-service → billing-service)</h2>
+        <p class="small">
+            This calls splitter-service (via gateway). Splitter-service then calls billing-service
+            to fetch bill details and calculates per-user share.
+        </p>
+
+        <label>Bill ID</label>
+        <input id="splitBillId" placeholder="billId from step 3">
+        <button onclick="viewSplit()">Get Split</button>
+
+        <div id="splitOutput"></div>
+    </div>
+</div>
+
+<script>
+    // Helper: generic JSON POST
+    async function postJson(path, body) {
+        const res = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error('Error ' + res.status + ': ' + text);
+        }
+        return res.json();
+    }
+
+    async function getJson(path) {
+        const res = await fetch(path);
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error('Error ' + res.status + ': ' + text);
+        }
+        return res.json();
+    }
+
+    // 1) Users
+    async function createUser() {
+        const name = document.getElementById('userName').value;
+        const email = document.getElementById('userEmail').value;
+        const phone = document.getElementById('userPhone').value;
+
+        try {
+            const user = await postJson('/users', { name, email, phone });
+            document.getElementById('usersOutput').innerText =
+                'Created user:\n' + JSON.stringify(user, null, 2);
+        } catch (e) {
+            document.getElementById('usersOutput').innerText = e.message;
+        }
+    }
+
+    async function loadUsers() {
+        try {
+            const users = await getJson('/users');
+            document.getElementById('usersOutput').innerText =
+                'All users:\n' + JSON.stringify(users, null, 2);
+        } catch (e) {
+            document.getElementById('usersOutput').innerText = e.message;
+        }
+    }
+
+    // 2) Groups
+    async function createGroup() {
+        const name = document.getElementById('groupName').value;
+        const description = document.getElementById('groupDescription').value;
+        const memberIdsStr = document.getElementById('groupMemberIds').value || '';
+        const memberIds = memberIdsStr.split(',').map(s => s.trim()).filter(Boolean);
+
+        try {
+            const group = await postJson('/groups', { name, description, memberIds });
+            document.getElementById('groupsOutput').innerText =
+                'Created group:\n' + JSON.stringify(group, null, 2);
+            document.getElementById('groupIdView').value = group.id || group._id || '';
+        } catch (e) {
+            document.getElementById('groupsOutput').innerText = e.message;
+        }
+    }
+
+    async function viewGroup() {
+        const groupId = document.getElementById('groupIdView').value.trim();
+        if (!groupId) {
+            alert('Enter groupId');
+            return;
+        }
+        try {
+            const group = await getJson('/groups/' + groupId);
+            document.getElementById('groupsOutput').innerText =
+                'Group details:\n' + JSON.stringify(group, null, 2);
+        } catch (e) {
+            document.getElementById('groupsOutput').innerText = e.message;
+        }
+    }
+
+    // 3) Billing
+    async function createBill() {
+        const groupId = document.getElementById('billGroupId').value.trim();
+        const createdByUserId = document.getElementById('billCreatedBy').value.trim();
+        const tax = parseFloat(document.getElementById('billTax').value || '0');
+        const serviceCharge = parseFloat(document.getElementById('billService').value || '0');
+        const tip = parseFloat(document.getElementById('billTip').value || '0');
+
+        const itemName = document.getElementById('itemName').value;
+        const qty = parseInt(document.getElementById('itemQty').value || '1', 10);
+        const unitPrice = parseFloat(document.getElementById('itemUnitPrice').value || '0');
+        const totalPrice = qty * unitPrice;
+        const assignedStr = document.getElementById('itemUserIds').value || '';
+        const assignedUserIds = assignedStr.split(',').map(s => s.trim()).filter(Boolean);
+
+        const body = {
+            groupId,
+            createdByUserId,
+            tax,
+            serviceCharge,
+            tip,
+            items: [
+                {
+                    name: itemName,
+                    quantity: qty,
+                    unitPrice: unitPrice,
+                    totalPrice: totalPrice,
+                    assignedUserIds: assignedUserIds
+                }
+            ]
+        };
+
+        try {
+            const bill = await postJson('/bills', body);
+            document.getElementById('billingOutput').innerText =
+                'Created bill:\n' + JSON.stringify(bill, null, 2);
+            document.getElementById('billIdView').value = bill.id || bill._id || '';
+        } catch (e) {
+            document.getElementById('billingOutput').innerText = e.message;
+        }
+    }
+
+    async function viewBill() {
+        const billId = document.getElementById('billIdView').value.trim();
+        if (!billId) {
+            alert('Enter billId');
+            return;
+        }
+        try {
+            const bill = await getJson('/bills/' + billId);
+            document.getElementById('billingOutput').innerText =
+                'Bill details:\n' + JSON.stringify(bill, null, 2);
+        } catch (e) {
+            document.getElementById('billingOutput').innerText = e.message;
+        }
+    }
+
+    // 4) Split
+    async function viewSplit() {
+        const billId = document.getElementById('splitBillId').value.trim();
+        if (!billId) {
+            alert('Enter billId');
+            return;
+        }
+        try {
+            const split = await getJson('/splits/' + billId);
+            renderSplit(split);
+        } catch (e) {
+            document.getElementById('splitOutput').innerText = e.message;
+        }
+    }
+
+    function renderSplit(split) {
+        if (!split || !split.userShares) {
+            document.getElementById('splitOutput').innerText =
+                'No split data found.';
+            return;
+        }
+        let html = `
+          <p><b>Bill ID:</b> ${split.billId || ''} &nbsp; 
+             <b>Group ID:</b> ${split.groupId || ''}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Items Subtotal</th>
+                <th>Tax Share</th>
+                <th>Service Charge Share</th>
+                <th>Tip Share</th>
+                <th>Total Owed</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        for (const s of split.userShares) {
+            html += `
+              <tr>
+                <td>${s.userId}</td>
+                <td>${s.itemsSubtotal.toFixed(2)}</td>
+                <td>${s.taxShare.toFixed(2)}</td>
+                <td>${s.serviceChargeShare.toFixed(2)}</td>
+                <td>${s.tipShare.toFixed(2)}</td>
+                <td><b>${s.totalOwed.toFixed(2)}</b></td>
+              </tr>
+            `;
+        }
+        html += '</tbody></table>';
+        document.getElementById('splitOutput').innerHTML = html;
+    }
+</script>
+</body>
+</html>
