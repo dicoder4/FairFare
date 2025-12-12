@@ -18,7 +18,7 @@ public class SplitService {    @Autowired
     @Autowired
     private SplitResultRepository splitResultRepository;
 
-    private static final String BILLING_SERVICE_BASE_URL = "http://localhost:3003";
+    private static final String BILLING_SERVICE_BASE_URL = "http://billing-service";
 
     public SplitResult getOrCalculateSplit(String billId) {
         return splitResultRepository.findByBillId(billId)
@@ -67,6 +67,15 @@ public class SplitService {    @Autowired
             double tipShare = ratio * bill.getTip();
 
             double totalOwed = userSubtotal + taxShare + serviceShare + tipShare;
+            
+            double paidAmount = 0.0;
+            if (userId.equals(bill.getPaidByUserId())) {
+                paidAmount = bill.getTotal();
+            }
+            
+            // Positive balance = You Owe. Negative balance = You are Owed.
+            // Balance = Cost - Paid
+            double netBalance = totalOwed - paidAmount;
 
             UserShare userShare = new UserShare(
                     userId,
@@ -74,7 +83,10 @@ public class SplitService {    @Autowired
                     taxShare,
                     serviceShare,
                     tipShare,
-                    totalOwed
+                    totalOwed,
+                    paidAmount,
+                    netBalance,
+                    false // Default: not settled
             );
 
             shares.add(userShare);
@@ -82,5 +94,25 @@ public class SplitService {    @Autowired
 
         SplitResult result = new SplitResult(bill.getId(), bill.getGroupId(), shares);
         return splitResultRepository.save(result);
+    }
+    
+    public SplitResult settleDebt(String billId, String userId) {
+        SplitResult split = getOrCalculateSplit(billId);
+        
+        boolean updated = false;
+        for (UserShare share : split.getUserShares()) {
+            if (share.getUserId().equals(userId)) {
+                // Toggle settled status or just set to true?
+                // Let's set to true for "Mark Paid".
+                share.setSettled(true);
+                updated = true;
+                break;
+            }
+        }
+        
+        if (updated) {
+            return splitResultRepository.save(split);
+        }
+        return split;
     }
 }

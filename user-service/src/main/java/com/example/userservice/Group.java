@@ -35,7 +35,9 @@ public class Group {
         return id;
     }
 
-    // no setter for id – Mongo sets it
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;

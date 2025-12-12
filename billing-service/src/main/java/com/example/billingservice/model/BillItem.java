@@ -55,4 +55,22 @@ public class BillItem {
     public void setAssignedUserIds(List<String> assignedUserIds) {
         this.assignedUserIds = assignedUserIds;
     }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+        this.totalPrice = this.quantity * this.unitPrice;
+    }
+
+    public void setUnitPrice(double unitPrice) {
+        this.unitPrice = unitPrice;
+        this.totalPrice = this.quantity * this.unitPrice;
+    }
+
+    public void setTotalPrice(double totalPrice) {
+        this.totalPrice = totalPrice;
+    }
 }

@@ -15,7 +15,8 @@ public class SplitterServiceApplication {
     }
 
     @Bean
+    @org.springframework.cloud.client.loadbalancer.LoadBalanced
     public RestTemplate restTemplate() {
-        return new RestTemplate(); // simple HTTP client, no Feign
+        return new RestTemplate(); // uses Eureka to resolve service names
     }
 }

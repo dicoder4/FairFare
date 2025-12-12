@@ -2,412 +2,730 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>FairFare – Bill Splitter Demo</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Optional: a tiny bit of styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FairFare | Premium Bill Splitter</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f7fb;
-            margin: 0;
-            padding: 20px;
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --input-bg: #334155;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6; /* Blue-500 */
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --border: #475569;
         }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        h1, h2, h3 {
+            margin: 0;
+            font-weight: 600;
+        }
+
         h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2rem;
             text-align: center;
         }
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
+
+        h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
         }
+
         .card {
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 16px 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255,255,255,0.05);
         }
-        .card h2 {
-            margin-top: 0;
-            font-size: 18px;
-        }
-        label {
-            display: block;
-            margin-top: 8px;
-            font-size: 14px;
-        }
-        input, textarea {
-            width: 100%;
-            padding: 6px 8px;
-            margin-top: 4px;
-            box-sizing: border-box;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-        }
-        button {
-            margin-top: 10px;
-            padding: 8px 14px;
-            border: none;
-            border-radius: 4px;
-            background: #3b82f6;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        button:hover {
-            background: #2563eb;
-        }
-        .output {
-            margin-top: 10px;
-            font-family: Consolas, monospace;
-            font-size: 13px;
-            background: #f0f0f5;
-            padding: 8px;
-            border-radius: 4px;
-            max-height: 220px;
-            overflow: auto;
-        }
-        .two-column {
+
+        .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 1.5rem;
         }
-        table {
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button.secondary {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border);
+        }
+        
+        button.secondary:hover {
+            background-color: #475569;
+        }
+
+        button.danger {
+            background-color: var(--danger);
+        }
+
+        .user-pill {
+            display: inline-flex;
+            align-items: center;
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        
+        .user-pill.selected {
+            background-color: var(--accent);
+            color: white;
+            border-color: #60a5fa;
+        }
+
+        .item-row {
+            background-color: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .remove-item {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: auto;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            background: transparent;
+            color: var(--text-muted);
+        }
+        .remove-item:hover {
+            color: var(--danger);
+            background: rgba(255,255,255,0.05);
+        }
+
+        pre {
+            background-color: #000;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            color: #10b981;
+            font-size: 0.85rem;
+            max-height: 200px;
+        }
+        
+        .status-msg {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .status-success { background: rgba(16, 185, 129, 0.2); color: #34d399; display: block; }
+        .status-error { background: rgba(239, 68, 68, 0.2); color: #fr8787; display: block; }
+
+        /* Split Table */
+        .split-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
-            font-size: 13px;
+            margin-top: 1rem;
         }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 6px;
+        
+        .split-table th {
             text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
         }
-        th {
-            background: #eef2ff;
+        
+        .split-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
         }
-        .small {
-            font-size: 12px;
-            color: #555;
-        }
+        
+        .positive { color: var(--danger); font-weight: bold; } /* Start Owed */
+        .negative { color: var(--success); font-weight: bold; } /* Owed Money */
+
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>FairFare – Microservices Demo</h1>
-    <p class="small">
-        This UI talks to the <b>API Gateway</b> (port 3081), which routes requests to:
-        user-service (users & groups), billing-service (bills) and splitter-service (splits).
-    </p>
 
-    <!-- 1. USERS -->
-    <div class="card">
-        <h2>1. Create User (user-service)</h2>
-        <label>Name</label>
-        <input id="userName" placeholder="e.g. Alice">
+    <h1>FairFare</h1>
 
-        <label>Email</label>
-        <input id="userEmail" placeholder="alice@example.com">
-
-        <label>Phone</label>
-        <input id="userPhone" placeholder="9999999999">
-
-        <button onclick="createUser()">Create User</button>
-        <button onclick="loadUsers()">Load All Users</button>
-
-        <div class="output" id="usersOutput"></div>
-    </div>
-
-    <!-- 2. GROUPS -->
-    <div class="card">
-        <h2>2. Create Group (user-service)</h2>
-        <p class="small">
-            Use user IDs from above. Enter comma-separated user IDs.
-        </p>
-        <label>Group Name</label>
-        <input id="groupName" placeholder="Goa Trip">
-
-        <label>Description</label>
-        <input id="groupDescription" placeholder="New Year Plan">
-
-        <label>Member IDs (comma-separated)</label>
-        <input id="groupMemberIds" placeholder="userId1,userId2">
-
-        <button onclick="createGroup()">Create Group</button>
-
-        <label style="margin-top: 12px;">Group ID (for viewing)</label>
-        <input id="groupIdView" placeholder="Paste created groupId here">
-        <button onclick="viewGroup()">View Group</button>
-
-        <div class="output" id="groupsOutput"></div>
-    </div>
-
-    <!-- 3. BILLING -->
-    <div class="card">
-        <h2>3. Create Bill (billing-service → user-service)</h2>
-        <p class="small">
-            This will call billing-service (via gateway), which internally calls user-service
-            to validate <code>groupId</code>.
-        </p>
-
-        <div class="two-column">
-            <div>
-                <label>Group ID</label>
-                <input id="billGroupId" placeholder="groupId from step 2">
-
-                <label>Created By (userId)</label>
-                <input id="billCreatedBy" placeholder="userId of payer">
+    <div class="container">
+        
+        <!-- STEP 1: CREATE USERS -->
+        <div class="card">
+            <h2>1. Create Users</h2>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="userName" placeholder="e.g. Alice">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" placeholder="alice@example.com">
+                </div>
             </div>
-            <div>
-                <label>Tax</label>
-                <input id="billTax" type="number" value="50">
+            <button onclick="createUser()">Add User</button>
+            <div id="userCreationStatus" class="status-msg"></div>
+        </div>
 
-                <label>Service Charge</label>
-                <input id="billService" type="number" value="20">
+        <!-- STEP 2: CREATE GROUP -->
+        <div class="card">
+            <h2>2. Create Group</h2>
+            <div class="form-group">
+                <label>Group Name</label>
+                <input type="text" id="groupName" placeholder="e.g. Weekend Trip">
+            </div>
+            
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label>Select Members</label>
+                <p class="small" style="color:var(--text-muted); font-size: 0.85rem; margin-top:-5px; margin-bottom: 10px;">
+                    Click users below to select them for this group.
+                </p>
+                
+                <div id="usersList" style="display: flex; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <span class="text-muted" style="font-size: 0.9rem; color: #64748b;">Loading users...</span>
+                </div>
+                <button class="secondary" style="width: auto; padding: 5px 10px; font-size: 0.8rem;" onclick="loadUsers()">↻ Refresh List</button>
+            </div>
 
-                <label>Tip</label>
-                <input id="billTip" type="number" value="30">
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label>Selected:</label>
+                <div id="selectedMembersPreview" style="font-weight: 600; color: var(--accent); min-height: 1.5rem;">
+                    None
+                </div>
+            </div>
+
+            <button onclick="createGroup()">Create Group</button>
+            
+            <div style="margin-top: 1.5rem;">
+                <label>Active Group</label>
+                <select id="groupSelect" onchange="onGroupSelect()">
+                    <option value="">-- Select a Group --</option>
+                </select>
             </div>
         </div>
 
-        <h3 style="font-size:15px;margin-top:12px;">Single Item (for demo)</h3>
-        <div class="two-column">
-            <div>
-                <label>Item Name</label>
-                <input id="itemName" placeholder="Pizza">
+        <!-- STEP 3: CREATE BILL -->
+        <div class="card">
+            <h2>3. Create Bill</h2>
+            
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Payer (Who paid?)</label>
+                    <select id="billPayer">
+                        <option value="">Select Group First</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tax ($)</label>
+                    <input type="number" id="billTax" value="0">
+                </div>
             </div>
-            <div>
-                <label>Quantity</label>
-                <input id="itemQty" type="number" value="2">
+
+            <label>Bill Items</label>
+            <div id="billItemsContainer">
+                <!-- Items injected here -->
             </div>
+            <button class="secondary" onclick="addBillItemRow()" style="margin-bottom: 1rem;">+ Add Item</button>
+
+            <button onclick="createBill()">Submit Bill</button>
+            <div id="billStatus" class="status-msg"></div>
         </div>
 
-        <div class="two-column">
-            <div>
-                <label>Unit Price</label>
-                <input id="itemUnitPrice" type="number" value="200">
+        <!-- STEP 4: RESULTS -->
+        <div class="card">
+            <h2>4. Split Results</h2>
+            <div class="form-group">
+                <label>Select Bill</label>
+                <select id="billSelect" onchange="getSplit()">
+                    <option value="">-- Select a Bill --</option>
+                </select>
             </div>
-            <div>
-                <label>Assigned User IDs (comma-separated)</label>
-                <input id="itemUserIds" placeholder="userId1,userId2">
-            </div>
+            
+            <div id="splitResult"></div>
         </div>
 
-        <button onclick="createBill()">Create Bill</button>
-
-        <label style="margin-top:12px;">Bill ID (for viewing / splitting)</label>
-        <input id="billIdView" placeholder="Paste created billId here">
-        <button onclick="viewBill()">View Bill</button>
-
-        <div class="output" id="billingOutput"></div>
     </div>
 
-    <!-- 4. SPLIT -->
-    <div class="card">
-        <h2>4. View Split (splitter-service → billing-service)</h2>
-        <p class="small">
-            This calls splitter-service (via gateway). Splitter-service then calls billing-service
-            to fetch bill details and calculates per-user share.
-        </p>
-
-        <label>Bill ID</label>
-        <input id="splitBillId" placeholder="billId from step 3">
-        <button onclick="viewSplit()">Get Split</button>
-
-        <div id="splitOutput"></div>
-    </div>
-</div>
-
-<script>
-    // Helper: generic JSON POST
-    async function postJson(path, body) {
-        const res = await fetch(path, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error('Error ' + res.status + ': ' + text);
-        }
-        return res.json();
-    }
-
-    async function getJson(path) {
-        const res = await fetch(path);
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error('Error ' + res.status + ': ' + text);
-        }
-        return res.json();
-    }
-
-    // 1) Users
-    async function createUser() {
-        const name = document.getElementById('userName').value;
-        const email = document.getElementById('userEmail').value;
-        const phone = document.getElementById('userPhone').value;
-
-        try {
-            const user = await postJson('/users', { name, email, phone });
-            document.getElementById('usersOutput').innerText =
-                'Created user:\n' + JSON.stringify(user, null, 2);
-        } catch (e) {
-            document.getElementById('usersOutput').innerText = e.message;
-        }
-    }
-
-    async function loadUsers() {
-        try {
-            const users = await getJson('/users');
-            document.getElementById('usersOutput').innerText =
-                'All users:\n' + JSON.stringify(users, null, 2);
-        } catch (e) {
-            document.getElementById('usersOutput').innerText = e.message;
-        }
-    }
-
-    // 2) Groups
-    async function createGroup() {
-        const name = document.getElementById('groupName').value;
-        const description = document.getElementById('groupDescription').value;
-        const memberIdsStr = document.getElementById('groupMemberIds').value || '';
-        const memberIds = memberIdsStr.split(',').map(s => s.trim()).filter(Boolean);
-
-        try {
-            const group = await postJson('/groups', { name, description, memberIds });
-            document.getElementById('groupsOutput').innerText =
-                'Created group:\n' + JSON.stringify(group, null, 2);
-            document.getElementById('groupIdView').value = group.id || group._id || '';
-        } catch (e) {
-            document.getElementById('groupsOutput').innerText = e.message;
-        }
-    }
-
-    async function viewGroup() {
-        const groupId = document.getElementById('groupIdView').value.trim();
-        if (!groupId) {
-            alert('Enter groupId');
-            return;
-        }
-        try {
-            const group = await getJson('/groups/' + groupId);
-            document.getElementById('groupsOutput').innerText =
-                'Group details:\n' + JSON.stringify(group, null, 2);
-        } catch (e) {
-            document.getElementById('groupsOutput').innerText = e.message;
-        }
-    }
-
-    // 3) Billing
-    async function createBill() {
-        const groupId = document.getElementById('billGroupId').value.trim();
-        const createdByUserId = document.getElementById('billCreatedBy').value.trim();
-        const tax = parseFloat(document.getElementById('billTax').value || '0');
-        const serviceCharge = parseFloat(document.getElementById('billService').value || '0');
-        const tip = parseFloat(document.getElementById('billTip').value || '0');
-
-        const itemName = document.getElementById('itemName').value;
-        const qty = parseInt(document.getElementById('itemQty').value || '1', 10);
-        const unitPrice = parseFloat(document.getElementById('itemUnitPrice').value || '0');
-        const totalPrice = qty * unitPrice;
-        const assignedStr = document.getElementById('itemUserIds').value || '';
-        const assignedUserIds = assignedStr.split(',').map(s => s.trim()).filter(Boolean);
-
-        const body = {
-            groupId,
-            createdByUserId,
-            tax,
-            serviceCharge,
-            tip,
-            items: [
-                {
-                    name: itemName,
-                    quantity: qty,
-                    unitPrice: unitPrice,
-                    totalPrice: totalPrice,
-                    assignedUserIds: assignedUserIds
-                }
-            ]
+    <script>
+        const API = {
+            users: '/users',
+            groups: '/groups',
+            bills: '/bills',
+            splits: '/splits'
         };
 
-        try {
-            const bill = await postJson('/bills', body);
-            document.getElementById('billingOutput').innerText =
-                'Created bill:\n' + JSON.stringify(bill, null, 2);
-            document.getElementById('billIdView').value = bill.id || bill._id || '';
-        } catch (e) {
-            document.getElementById('billingOutput').innerText = e.message;
-        }
-    }
+        // State
+        let allUsers = [];
+        let selectedUserIdsForGroup = new Set();
+        let currentGroupMembers = [];
 
-    async function viewBill() {
-        const billId = document.getElementById('billIdView').value.trim();
-        if (!billId) {
-            alert('Enter billId');
-            return;
+        // --- USERS ---
+        async function loadUsers() {
+            try {
+                const res = await fetch(API.users);
+                allUsers = await res.json();
+                renderUsersList();
+                renderPayerSelect(); // update if needed
+            } catch (e) {
+                console.error("Failed to load users", e);
+            }
         }
-        try {
-            const bill = await getJson('/bills/' + billId);
-            document.getElementById('billingOutput').innerText =
-                'Bill details:\n' + JSON.stringify(bill, null, 2);
-        } catch (e) {
-            document.getElementById('billingOutput').innerText = e.message;
-        }
-    }
 
-    // 4) Split
-    async function viewSplit() {
-        const billId = document.getElementById('splitBillId').value.trim();
-        if (!billId) {
-            alert('Enter billId');
-            return;
-        }
-        try {
-            const split = await getJson('/splits/' + billId);
-            renderSplit(split);
-        } catch (e) {
-            document.getElementById('splitOutput').innerText = e.message;
-        }
-    }
+        async function createUser() {
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            if(!name) return alert("Name required");
 
-    function renderSplit(split) {
-        if (!split || !split.userShares) {
-            document.getElementById('splitOutput').innerText =
-                'No split data found.';
-            return;
+            try {
+                await fetch(API.users, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, email})
+                });
+                document.getElementById('userName').value = '';
+                document.getElementById('userEmail').value = '';
+                loadUsers();
+            } catch (e) {
+                alert("Error creating user");
+            }
         }
-        let html = `
-          <p><b>Bill ID:</b> ${split.billId || ''} &nbsp; 
-             <b>Group ID:</b> ${split.groupId || ''}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>User ID</th>
-                <th>Items Subtotal</th>
-                <th>Tax Share</th>
-                <th>Service Charge Share</th>
-                <th>Tip Share</th>
-                <th>Total Owed</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-        for (const s of split.userShares) {
-            html += `
-              <tr>
-                <td>${s.userId}</td>
-                <td>${s.itemsSubtotal.toFixed(2)}</td>
-                <td>${s.taxShare.toFixed(2)}</td>
-                <td>${s.serviceChargeShare.toFixed(2)}</td>
-                <td>${s.tipShare.toFixed(2)}</td>
-                <td><b>${s.totalOwed.toFixed(2)}</b></td>
-              </tr>
+
+        function renderUsersList() {
+            const container = document.getElementById('usersList');
+            container.innerHTML = '';
+            
+            allUsers.forEach(user => {
+                const pill = document.createElement('div');
+                pill.className = `user-pill ${selectedUserIdsForGroup.has(user.id) ? 'selected' : ''}`;
+                pill.innerText = user.name;
+                pill.onclick = () => toggleUserSelection(user.id);
+                container.appendChild(pill);
+            });
+        }
+
+        function toggleUserSelection(id) {
+            if (selectedUserIdsForGroup.has(id)) {
+                selectedUserIdsForGroup.delete(id);
+            } else {
+                selectedUserIdsForGroup.add(id);
+            }
+            renderUsersList();
+            updateSelectedMembersPreview();
+        }
+
+        function updateSelectedMembersPreview() {
+            const names = allUsers
+                .filter(u => selectedUserIdsForGroup.has(u.id))
+                .map(u => u.name)
+                .join(", ");
+            document.getElementById('selectedMembersPreview').innerText = names || "None selected";
+        }
+
+        // --- GROUPS ---
+        async function loadGroups() {
+            try {
+                const res = await fetch(API.groups);
+                const groups = await res.json();
+                const select = document.getElementById('groupSelect');
+                
+                // Keep the default option
+                select.innerHTML = '<option value="">-- Select a Group --</option>';
+                
+                groups.forEach(g => {
+                    const opt = document.createElement('option');
+                    opt.value = g.id;
+                    opt.text = g.name;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Failed to load groups", e);
+            }
+        }
+
+        async function createGroup() {
+            const name = document.getElementById('groupName').value;
+            const memberIds = Array.from(selectedUserIdsForGroup);
+            
+            if(!name || memberIds.length === 0) return alert("Name and members required");
+
+            try {
+                const res = await fetch(API.groups, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, memberIds})
+                });
+                const group = await res.json();
+                
+                // Reload groups to include new one and select it
+                await loadGroups();
+                document.getElementById('groupSelect').value = group.id;
+                
+                // Reset form
+                selectedUserIdsForGroup.clear();
+                renderUsersList();
+                updateSelectedMembersPreview();
+                document.getElementById('groupName').value = '';
+                
+                onGroupSelect(); // Trigger load
+            } catch (e) {
+                alert("Error creating group");
+            }
+        }
+        
+        async function onGroupSelect() {
+            const groupId = document.getElementById('groupSelect').value;
+            if(!groupId) return;
+            
+            // Allow Payer Selection
+            // Ideally we fetch group details to get ONLY members, but for simplicity we show all users or selected ones
+            // Let's fetch the group to be accurate
+            try {
+                const res = await fetch(`${API.groups}/${groupId}`);
+                const group = await res.json();
+                
+                // Filter allUsers to find members
+                currentGroupMembers = allUsers.filter(u => group.memberIds.includes(u.id));
+                renderPayerSelect();
+                renderAllItemUserSelects();
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function renderPayerSelect() {
+            const select = document.getElementById('billPayer');
+            select.innerHTML = '<option value="">Select Payer</option>';
+            currentGroupMembers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id;
+                opt.text = u.name;
+                select.appendChild(opt);
+            });
+        }
+
+        async function loadBills() {
+            try {
+                const res = await fetch(API.bills);
+                const bills = await res.json();
+                const select = document.getElementById('billSelect');
+
+                // Keep default
+                select.innerHTML = '<option value="">-- Select a Bill --</option>';
+
+                bills.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.text = `Bill #${b.id.substr(-6)} ($${b.total})`;
+                    select.appendChild(opt);
+                });
+            } catch(e) {
+                console.error("Failed to load bills", e);
+            }
+        }
+
+        // --- BILLS ---
+        function addBillItemRow() {
+            const container = document.getElementById('billItemsContainer');
+            const idx = container.children.length;
+            
+            const div = document.createElement('div');
+            div.className = 'item-row';
+            div.innerHTML = `
+                <button class="remove-item" onclick="this.parentElement.remove()">✕</button>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Item Name</label>
+                        <input type="text" class="item-name" placeholder="Item ${idx+1}">
+                    </div>
+                    <div class="form-group">
+                        <label>Cost ($ total)</label>
+                        <input type="number" class="item-cost" value="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Shared By (Hold Ctrl/Cmd to select multiple)</label>
+                    <select multiple class="item-users" style="height: 80px;">
+                        ${currentGroupMembers.map(u => `<option value="${u.id}" selected>${u.name}</option>`).join('')}
+                    </select>
+                </div>
             `;
+            container.appendChild(div);
         }
-        html += '</tbody></table>';
-        document.getElementById('splitOutput').innerHTML = html;
-    }
-</script>
+        
+        function renderAllItemUserSelects() {
+            // Re-render user lists in existing item rows if group changes
+            // For now, clear rows to avoid confusion
+            document.getElementById('billItemsContainer').innerHTML = '';
+            addBillItemRow(); // Add one default
+        }
+
+        async function createBill() {
+            const groupId = document.getElementById('groupSelect').value;
+            const payerId = document.getElementById('billPayer').value;
+            const tax = parseFloat(document.getElementById('billTax').value) || 0;
+            
+            if(!groupId || !payerId) return alert("Group and Payer required");
+
+            const itemRows = document.querySelectorAll('.item-row');
+            const items = [];
+            
+            itemRows.forEach(row => {
+                const name = row.querySelector('.item-name').value;
+                const cost = parseFloat(row.querySelector('.item-cost').value) || 0;
+                const userSelect = row.querySelector('.item-users');
+                const assignedIds = Array.from(userSelect.selectedOptions).map(o => o.value);
+                
+                if(name && cost > 0 && assignedIds.length > 0) {
+                    items.push({
+                        name,
+                        quantity: 1, // Simplify for UI
+                        unitPrice: cost,
+                        assignedUserIds: assignedIds
+                    });
+                }
+            });
+
+            if(items.length === 0) return alert("Add at least one valid item");
+
+            const payload = {
+                groupId,
+                createdByUserId: payerId, // Usually same as payer for simple flow
+                paidByUserId: payerId,
+                tax,
+                serviceCharge: 0,
+                tip: 0,
+                items
+            };
+
+            try {
+                const res = await fetch(API.bills, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const bill = await res.json();
+                
+                const status = document.getElementById('billStatus');
+                status.innerText = "Bill Created! ID: " + bill.id;
+                status.className = "status-msg status-success";
+                
+                // Add to Bill Select
+                const select = document.getElementById('billSelect');
+                const opt = document.createElement('option');
+                opt.value = bill.id;
+                opt.text = `Bill #${bill.id.substr(-6)} ($${bill.total})`;
+                select.appendChild(opt);
+                
+            } catch(e) {
+                alert("Failed to create bill");
+            }
+        }
+
+        // --- SPLITS ---
+        async function getSplit() {
+            const billId = document.getElementById('billSelect').value;
+            if(!billId) return;
+
+            try {
+                const res = await fetch(`${API.splits}/${billId}`);
+                const split = await res.json();
+                renderSplit(split);
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function renderSplit(split) {
+            const container = document.getElementById('splitResult');
+            
+            // Map IDs to Names
+            const getName = (id) => {
+                const u = allUsers.find(x => x.id === id);
+                return u ? u.name : id;
+            };
+
+            let html = `
+                <table class="split-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Cost</th>
+                            <th>Paid</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // 1. Calculate Total Settled Amount from Debtors
+            let totalSettled = 0;
+            let totalCredit = 0; // Total amount owed TO people (sum of negatives)
+            
+            split.userShares.forEach(s => {
+                if (s.netBalance > 0 && s.settled) {
+                    totalSettled += s.netBalance;
+                }
+                if (s.netBalance < 0) {
+                    totalCredit += Math.abs(s.netBalance);
+                }
+            });
+
+            split.userShares.forEach(s => {
+                const isOwed = s.netBalance < 0;
+                let balanceClass = isOwed ? 'negative' : 'positive';
+                let balanceText = '';
+
+                if (isOwed) {
+                    // CREDITOR LOGIC
+                    // Calculate how much of their credit has been satisfied by settled debts
+                    // Proportion: (MyCredit / TotalCredit) * TotalSettled
+                    const myShare = Math.abs(s.netBalance);
+                    const ratio = totalCredit > 0 ? (myShare / totalCredit) : 0;
+                    const reimbursed = totalSettled * ratio;
+                    const remaining = myShare - reimbursed;
+
+                    if (remaining < 0.01) {
+                         balanceText = `<span style="color:var(--success); font-weight:bold;">All Settled</span>`;
+                         balanceClass = '';
+                    } else {
+                         balanceText = `Is Owed $${remaining.toFixed(2)}`;
+                         if (reimbursed > 0.01) {
+                             balanceText += ` <span style="font-size:0.8rem; color:var(--text-muted)">($${reimbursed.toFixed(2)} rec'd)</span>`;
+                         }
+                    }
+
+                } else {
+                    // DEBTOR LOGIC
+                    balanceText = `Owes $${s.netBalance.toFixed(2)}`;
+                }
+                
+                // Button / Settled Status Logic for Debtors
+                let actionHtml = '';
+                if (!isOwed && s.settled) {
+                     // Settled Debtor
+                     actionHtml = '<span style="color:var(--success); font-weight:bold;">✓ PAID</span>';
+                     balanceText = `<span style="text-decoration: line-through; opacity: 0.6;">${balanceText}</span> <span style="color:var(--success)"> (Settled)</span>`;
+                     balanceClass = ''; 
+                } else if (!isOwed && s.netBalance > 0.01) { 
+                     // Active Debtor
+                     actionHtml = `<button class="secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="markPaid('${split.billId}', '${s.userId}')">Mark Paid</button>`;
+                }
+
+                html += `
+                    <tr>
+                        <td><span class="user-pill selected" style="cursor:default">${getName(s.userId)}</span></td>
+                        <td>$${s.totalOwed.toFixed(2)}</td>
+                        <td>$${s.paidAmount.toFixed(2)}</td>
+                        <td class="${balanceClass}">${balanceText}</td>
+                        <td style="text-align:center;">${actionHtml}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+        
+        async function markPaid(billId, userId) {
+            if(!confirm("Mark this debt as settled?")) return;
+            try {
+                const res = await fetch(`${API.splits}/${billId}/settle/${userId}`, { method: 'POST' });
+                const split = await res.json();
+                renderSplit(split);
+            } catch(e) {
+                alert("Failed to settle debt");
+            }
+        }
+
+        // Init
+        loadUsers();
+        loadGroups();
+        loadBills(); // Load existing bills
+        addBillItemRow(); 
+
+    </script>
 </body>
 </html>

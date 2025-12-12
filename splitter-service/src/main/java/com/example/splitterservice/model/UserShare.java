@@ -8,6 +8,9 @@ public class UserShare {
     private double serviceChargeShare;
     private double tipShare;
     private double totalOwed;
+    private double paidAmount;
+    private double netBalance;
+    private boolean settled;
 
     public UserShare() {}
 
@@ -16,13 +19,19 @@ public class UserShare {
                      double taxShare,
                      double serviceChargeShare,
                      double tipShare,
-                     double totalOwed) {
+                     double totalOwed,
+                     double paidAmount,
+                     double netBalance,
+                     boolean settled) {
         this.userId = userId;
         this.itemsSubtotal = itemsSubtotal;
         this.taxShare = taxShare;
         this.serviceChargeShare = serviceChargeShare;
         this.tipShare = tipShare;
         this.totalOwed = totalOwed;
+        this.paidAmount = paidAmount;
+        this.netBalance = netBalance;
+        this.settled = settled;
     }
 
     public String getUserId() {
@@ -71,5 +80,29 @@ public class UserShare {
 
     public void setTotalOwed(double totalOwed) {
         this.totalOwed = totalOwed;
+    }
+
+    public double getPaidAmount() {
+        return paidAmount;
+    }
+
+    public void setPaidAmount(double paidAmount) {
+        this.paidAmount = paidAmount;
+    }
+
+    public double getNetBalance() {
+        return netBalance;
+    }
+
+    public void setNetBalance(double netBalance) {
+        this.netBalance = netBalance;
+    }
+
+    public boolean isSettled() {
+        return settled;
+    }
+
+    public void setSettled(boolean settled) {
+        this.settled = settled;
     }
 }

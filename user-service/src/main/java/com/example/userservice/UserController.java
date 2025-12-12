@@ -10,24 +10,23 @@ import java.util.List;
 public class UserController {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     // GET /users
     @GetMapping
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userService.getAllUsers();
     }
 
     // POST /users
     @PostMapping
     public User createUser(@RequestBody User user) {
-        return userRepository.insert(user);
+        return userService.createUser(user);
     }
 
     // GET /users/{id}
     @GetMapping("/{id}")
     public User getUserById(@PathVariable String id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        return userService.getUserById(id);
     }
 }

@@ -7,6 +7,7 @@ public class Bill {
     private String id;
     private String groupId;
     private String createdByUserId;
+    private String paidByUserId;
 
     private double subtotal;
     private double tax;
@@ -64,6 +65,14 @@ public class Bill {
 
     public void setCreatedByUserId(String createdByUserId) {
         this.createdByUserId = createdByUserId;
+    }
+
+    public String getPaidByUserId() {
+        return paidByUserId;
+    }
+
+    public void setPaidByUserId(String paidByUserId) {
+        this.paidByUserId = paidByUserId;
     }
 
     public void setSubtotal(double subtotal) {
