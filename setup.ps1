@@ -46,14 +46,51 @@ function Load-EnvFile {
 }
 
 function Test-Port {
-    param($Port)
+    param($Port, $HostName = "localhost")
     try {
         $connection = New-Object System.Net.Sockets.TcpClient
-        $connection.Connect("localhost", $Port)
+        # Set a short timeout (e.g., 2 seconds) using BeginConnect/EndConnect pattern or just rely on default
+        # For simplicity in PowerShell, direct Connect has a long timeout. 
+        # Let's try a simple approach first, but strictly this blocks. 
+        # Given it's a setup script, a small block is fine.
+        $connection.Connect($HostName, $Port)
         $connection.Close()
         return $true
     } catch {
         return $false
+    }
+}
+
+
+function Test-MongoConnection {
+    Write-Host "[Check] Verifying MongoDB connection..." -ForegroundColor Blue
+    $mongoHost = [Environment]::GetEnvironmentVariable("MONGODB_CLUSTER")
+    
+    if ([string]::IsNullOrWhiteSpace($mongoHost)) {
+        Write-Host "[WARNING] 'MONGODB_CLUSTER' variable is not set in .env. Skipping DB check." -ForegroundColor Yellow
+        return
+    }
+
+    # Basic cleanup if user pasted full URI
+    if ($mongoHost -match "@([^/:]+)") { 
+        # mongodb+srv://user:pass@cluster.mongodb.net/
+        $mongoHost = $Matches[1] 
+    } elseif ($mongoHost -match "://([^/:]+)") {
+        $mongoHost = $Matches[1]
+    }
+
+    Write-Host "   Target Host: $mongoHost" -ForegroundColor Cyan
+    
+    if (Test-Port -Port 27017 -HostName $mongoHost) {
+        Write-Host "[SUCCESS] Connected to MongoDB Atlas!" -ForegroundColor Green
+    } else {
+        Write-Host "[WARNING] Could not verify connectivity to MongoDB ($mongoHost) on port 27017." -ForegroundColor Yellow
+        Write-Host "   This might be due to:" -ForegroundColor Yellow
+        Write-Host "   1. SRV Record (The script checks the main domain, but the actual nodes are different)." -ForegroundColor Yellow
+        Write-Host "   2. IP Whitelist issues." -ForegroundColor Yellow
+        Write-Host "   3. Firewall blocking port 27017." -ForegroundColor Yellow
+        Write-Host "   --> Proceeding anyway. If the app fails to start, check your IP Whitelist in Atlas." -ForegroundColor Yellow
+        # Do not exit, just warn
     }
 }
 
@@ -151,6 +188,7 @@ function Setup-Environment {
 function Run-Services {
     Test-EnvFile
     Load-EnvFile
+    Test-MongoConnection
     
     Write-Host "[Starting] FairFare services..." -ForegroundColor Blue
     

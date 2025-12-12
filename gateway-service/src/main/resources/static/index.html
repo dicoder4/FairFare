@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tesseract.js for OCR -->
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     
     <style>
         :root {
@@ -299,7 +301,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Tax ($)</label>
+                    <label>Tax (<span class="currency-label">₹</span>)</label>
                     <input type="number" id="billTax" value="0">
                 </div>
             </div>
@@ -308,6 +310,13 @@
             <div id="billItemsContainer">
                 <!-- Items injected here -->
             </div>
+            <!-- SCAN RECEIPT SECTION -->
+            <div style="margin-bottom: 1.5rem; padding: 1rem; border: 1px dashed var(--border); border-radius: 8px; text-align: center;">
+                <input type="file" id="receiptInput" accept="image/*" style="display: none;" onchange="processReceipt()">
+                <button onclick="document.getElementById('receiptInput').click()" style="width: auto; background: var(--text-muted);">📷 Scan Receipt (AI)</button>
+                <div id="ocrStatus" style="margin-top:0.5rem; font-size:0.85rem; color: #fbbf24; min-height: 1.2em;"></div>
+            </div>
+
             <button class="secondary" onclick="addBillItemRow()" style="margin-bottom: 1rem;">+ Add Item</button>
 
             <button onclick="createBill()">Submit Bill</button>
@@ -330,6 +339,8 @@
     </div>
 
     <script>
+
+        // --- DATA & STATE ---
         const API = {
             users: '/users',
             groups: '/groups',
@@ -339,8 +350,66 @@
 
         // State
         let allUsers = [];
+        let allGroupsMap = {}; // Map<ID, Name>
         let selectedUserIdsForGroup = new Set();
         let currentGroupMembers = [];
+        
+        // Currency State
+        let currentCurrency = "INR";
+        const currencies = {
+            "INR": "₹",
+            "USD": "$",
+            "EUR": "€",
+            "GBP": "£"
+        };
+        
+        function getCurrency() {
+            return currencies[currentCurrency] || "$";
+        }
+
+        function toggleCurrency() {
+            const sel = document.getElementById('currencySelector');
+            currentCurrency = sel.value;
+            const symbol = getCurrency();
+
+            // Update all labels
+            document.querySelectorAll('.currency-label').forEach(el => el.innerText = symbol);
+
+            // Re-render things that show money
+            loadBills(); 
+            const billId = document.getElementById('billSelect').value;
+            if(billId) getSplit();
+        }
+
+        // --- INIT ---
+        window.onload = async () => {
+             // Inject Currency Selector UI if not present
+             const header = document.querySelector('h1');
+             if (!document.getElementById('currencySelector')) {
+                 const container = document.createElement('div');
+                 container.style.textAlign = 'center';
+                 container.style.marginBottom = '1rem';
+                 container.innerHTML = `
+                    <select id="currencySelector" onchange="toggleCurrency()" 
+                            style="width:auto; display:inline-block; padding:5px; background:var(--card-bg);">
+                        <option value="INR" selected>INR (₹)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                    </select>
+                 `;
+                 header.after(container);
+             }
+
+             // LOAD ORDER MATTERS
+             await loadUsers();
+             await loadGroups(); // Must load before bills to map Group IDs
+             await loadBills(); 
+             addBillItemRow();
+             
+             // Initialize labels
+             toggleCurrency();
+        };
 
         // --- USERS ---
         async function loadUsers() {
@@ -348,11 +417,65 @@
                 const res = await fetch(API.users);
                 allUsers = await res.json();
                 renderUsersList();
-                renderPayerSelect(); // update if needed
             } catch (e) {
                 console.error("Failed to load users", e);
             }
         }
+        
+        // ... createUser, etc ... (Lines 357-405 preserved efficiently by not touching them if possible, but replace tool acts on blocks)
+        // To avoid replacing HUGE chunks, I will target specific functions below.
+        
+        // --- GROUPS ---
+        async function loadGroups() {
+            try {
+                const res = await fetch(API.groups);
+                const groups = await res.json();
+                const select = document.getElementById('groupSelect');
+                
+                select.innerHTML = '<option value="">-- Select a Group --</option>';
+                allGroupsMap = {}; // Reset map
+                
+                groups.forEach(g => {
+                    allGroupsMap[g.id] = g.name; // Store for lookup
+                    
+                    const opt = document.createElement('option');
+                    opt.value = g.id;
+                    opt.text = g.name;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Failed to load groups", e);
+            }
+        }
+        
+        // --- BILLS LOAD ---
+        async function loadBills() {
+            try {
+                const res = await fetch(API.bills);
+                const bills = await res.json();
+                const select = document.getElementById('billSelect');
+
+                // Keep selection if possible? No, simplifying
+                const prevVal = select.value;
+                select.innerHTML = '<option value="">-- Select a Bill --</option>';
+
+                const cur = getCurrency();
+
+                bills.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    const groupName = allGroupsMap[b.groupId] ? `[${allGroupsMap[b.groupId]}]` : '';
+                    opt.text = `Bill #${b.id.substr(-6)} (${cur}${b.total}) - ${groupName}`;
+                    select.appendChild(opt);
+                });
+                
+                if(prevVal) select.value = prevVal;
+
+            } catch(e) {
+                console.error("Failed to load bills", e);
+            }
+        }
+
 
         async function createUser() {
             const name = document.getElementById('userName').value;
@@ -405,25 +528,7 @@
         }
 
         // --- GROUPS ---
-        async function loadGroups() {
-            try {
-                const res = await fetch(API.groups);
-                const groups = await res.json();
-                const select = document.getElementById('groupSelect');
-                
-                // Keep the default option
-                select.innerHTML = '<option value="">-- Select a Group --</option>';
-                
-                groups.forEach(g => {
-                    const opt = document.createElement('option');
-                    opt.value = g.id;
-                    opt.text = g.name;
-                    select.appendChild(opt);
-                });
-            } catch (e) {
-                console.error("Failed to load groups", e);
-            }
-        }
+
 
         async function createGroup() {
             const name = document.getElementById('groupName').value;
@@ -486,25 +591,7 @@
             });
         }
 
-        async function loadBills() {
-            try {
-                const res = await fetch(API.bills);
-                const bills = await res.json();
-                const select = document.getElementById('billSelect');
 
-                // Keep default
-                select.innerHTML = '<option value="">-- Select a Bill --</option>';
-
-                bills.forEach(b => {
-                    const opt = document.createElement('option');
-                    opt.value = b.id;
-                    opt.text = `Bill #${b.id.substr(-6)} ($${b.total})`;
-                    select.appendChild(opt);
-                });
-            } catch(e) {
-                console.error("Failed to load bills", e);
-            }
-        }
 
         // --- BILLS ---
         function addBillItemRow() {
@@ -521,7 +608,7 @@
                         <input type="text" class="item-name" placeholder="Item ${idx+1}">
                     </div>
                     <div class="form-group">
-                        <label>Cost ($ total)</label>
+                        <label>Cost (<span class="currency-label">₹</span> total)</label>
                         <input type="number" class="item-cost" value="0">
                     </div>
                 </div>
@@ -604,6 +691,136 @@
             }
         }
 
+
+
+        // --- OCR / RECEIPT SCANNING ---
+        async function processReceipt() {
+            const input = document.getElementById('receiptInput');
+            const file = input.files[0];
+            if(!file) return;
+
+            const status = document.getElementById('ocrStatus');
+            status.innerText = "Processing image (Enhanced Mode)...";
+
+            try {
+                const worker = await Tesseract.createWorker('eng');
+                status.innerText = "Recognizing text...";
+                
+                const { data: { text } } = await worker.recognize(file);
+                // console.log("OCR Text:", text); // Debug
+                
+                await worker.terminate();
+                status.innerText = "Parsing receipt functionality...";
+                
+                const result = parseReceiptText(text);
+                
+                if (result.items.length > 0) {
+                    populateBillItems(result.items);
+                    
+                    // Auto-fill Tax if found
+                    if (result.totalTax > 0) {
+                        const taxInput = document.getElementById('billTax');
+                        taxInput.value = result.totalTax.toFixed(2);
+                        // Flash the tax input to show it was updated
+                        taxInput.style.backgroundColor = '#10b98120';
+                        setTimeout(() => taxInput.style.backgroundColor = 'var(--input-bg)', 1000);
+                    }
+
+                    status.innerText = `Success! Found ${result.items.length} items & $${result.totalTax.toFixed(2)} Tax.`;
+                    status.style.color = 'var(--success)';
+                } else {
+                    status.innerText = "No clear items found using the new format (Qty Name Rate Amount).";
+                    status.style.color = 'var(--danger)';
+                }
+
+            } catch(e) {
+                console.error(e);
+                status.innerText = "Error scanning image.";
+                status.style.color = 'var(--danger)';
+            }
+        }
+
+        function parseReceiptText(text) {
+            const lines = text.split('\n');
+            const items = [];
+            let totalTax = 0;
+            
+            // 1. Regex for Items: "2 Coffee 200.00 400.00"
+            // Captures: 1=Qty, 2=Name, 3=UnitRate, 4=TotalAmount
+            const itemRegex = /^(\d+)\s+([a-zA-Z\s]+)\s+(\d+\.?\d{0,2})\s+(\d+\.?\d{0,2})/;
+            
+            // 2. Regex for Tax: "CGST: 5% 20.00" or "Tax 5.00"
+            // Looks for keywords and ends with a number
+            const taxRegex = /(CGST|SGST|IGST|GST|TAX|VAT)[\s\w%:.]*?(\d+\.?\d{2})$/i;
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                
+                // --- ITEM PARSING ---
+                const itemMatch = trimmed.match(itemRegex);
+                if (itemMatch) {
+                    const qty = itemMatch[1];
+                    const name = itemMatch[2].trim();
+                    // const rate = parseFloat(itemMatch[3]); 
+                    const total = parseFloat(itemMatch[4]);
+                    
+                    // Use Qty in name for clarity "Coffee (x2)"
+                    const displayName = `${name} (x${qty})`;
+                    
+                    if (total > 0) {
+                        items.push({ name: displayName, price: total });
+                    }
+                    return; // Skip tax check if it's an item
+                }
+
+                // --- TAX PARSING ---
+                // Avoid lines that look like items or totals
+                if (!trimmed.toUpperCase().startsWith("TOTAL") && !trimmed.toUpperCase().startsWith("SUB")) {
+                    const taxMatch = trimmed.match(taxRegex);
+                    if (taxMatch) {
+                        const taxAmount = parseFloat(taxMatch[2]);
+                        if (taxAmount > 0) {
+                            totalTax += taxAmount;
+                        }
+                    }
+                }
+            });
+
+            return { items, totalTax };
+        }
+
+        function populateBillItems(items) {
+            // Clear existing empty rows
+            const container = document.getElementById('billItemsContainer');
+            container.innerHTML = '';
+            
+            items.forEach(item => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'item-row';
+                
+                rowDiv.innerHTML = `
+                    <button class="remove-item" onclick="this.parentElement.remove()">✕</button>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Item Name</label>
+                            <input type="text" class="item-name" value="${item.name}">
+                        </div>
+                        <div class="form-group">
+                            <label>Cost ($ total)</label>
+                            <input type="number" class="item-cost" value="${item.price.toFixed(2)}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Shared By</label>
+                        <select multiple class="item-users" style="height: 80px;">
+                            ${currentGroupMembers.map(u => `<option value="${u.id}" selected>${u.name}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+                container.appendChild(rowDiv);
+            });
+        }
+
         // --- SPLITS ---
         async function getSplit() {
             const billId = document.getElementById('billSelect').value;
@@ -621,13 +838,60 @@
         function renderSplit(split) {
             const container = document.getElementById('splitResult');
             
+            // --- 1. CALCULATE TOTALS & PERCENTAGES ---
+            let totalBill = 0;
+            split.userShares.forEach(s => totalBill += s.totalOwed);
+            
+            // Safety check for div by zero
+            if (totalBill === 0) totalBill = 1;
+
+            const shares = split.userShares.map(s => {
+                const pct = (s.totalOwed / totalBill) * 100;
+                return { ...s, pct };
+            });
+
+            // Check if equal partition (within 1% tolerance)
+            const expectedPct = 100 / (shares.length || 1);
+            const isEqual = shares.every(s => Math.abs(s.pct - expectedPct) < 1.0);
+
+            const methodText = isEqual 
+                ? "<strong>Split Method:</strong> Equal Split" 
+                : "<strong>Split Method:</strong> Item-Based (Unequal)";
+            
+            // --- 2. BUILD VISUAL BAR ---
+            // Nice palette for segments
+            const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'];
+            
             // Map IDs to Names
             const getName = (id) => {
                 const u = allUsers.find(x => x.id === id);
                 return u ? u.name : id;
             };
 
+            let barHtml = `<div style="display:flex; height:12px; width:100%; border-radius:6px; overflow:hidden; margin-top:0.5rem; background:#333;">`;
+            
+            shares.forEach((s, idx) => {
+                const color = colors[idx % colors.length];
+                const name = getName(s.userId);
+                const tooltip = `${name}: ${getCurrency()}${s.totalOwed.toFixed(2)} (${s.pct.toFixed(1)}%)`;
+                if(s.pct > 0) {
+                     barHtml += `<div style="width:${s.pct}%; background:${color};" title="${tooltip}"></div>`;
+                }
+            });
+            barHtml += `</div>`;
+
+            // --- 3. ASSEMBLE HTML ---
             let html = `
+                <div style="margin-bottom:1rem; padding:0.5rem; background:var(--input-bg); border-radius:4px; font-size:0.9rem; color: #ccc;">
+                    ${methodText}
+                    ${barHtml}
+                    <div style="font-size:0.75rem; color:#666; margin-top:4px; text-align:right;">
+                        (Hover bar for details)
+                    </div>
+                </div>
+            `;
+
+            html += `
                 <table class="split-table">
                     <thead>
                         <tr>
@@ -635,6 +899,7 @@
                             <th>Cost</th>
                             <th>Paid</th>
                             <th>Balance</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -660,8 +925,6 @@
 
                 if (isOwed) {
                     // CREDITOR LOGIC
-                    // Calculate how much of their credit has been satisfied by settled debts
-                    // Proportion: (MyCredit / TotalCredit) * TotalSettled
                     const myShare = Math.abs(s.netBalance);
                     const ratio = totalCredit > 0 ? (myShare / totalCredit) : 0;
                     const reimbursed = totalSettled * ratio;
@@ -671,15 +934,15 @@
                          balanceText = `<span style="color:var(--success); font-weight:bold;">All Settled</span>`;
                          balanceClass = '';
                     } else {
-                         balanceText = `Is Owed $${remaining.toFixed(2)}`;
+                         balanceText = `Is Owed ${getCurrency()}${remaining.toFixed(2)}`;
                          if (reimbursed > 0.01) {
-                             balanceText += ` <span style="font-size:0.8rem; color:var(--text-muted)">($${reimbursed.toFixed(2)} rec'd)</span>`;
+                             balanceText += ` <span style="font-size:0.8rem; color:var(--text-muted)">(${getCurrency()}${reimbursed.toFixed(2)} rec'd)</span>`;
                          }
                     }
 
                 } else {
                     // DEBTOR LOGIC
-                    balanceText = `Owes $${s.netBalance.toFixed(2)}`;
+                    balanceText = `Owes ${getCurrency()}${s.netBalance.toFixed(2)}`;
                 }
                 
                 // Button / Settled Status Logic for Debtors
@@ -697,8 +960,8 @@
                 html += `
                     <tr>
                         <td><span class="user-pill selected" style="cursor:default">${getName(s.userId)}</span></td>
-                        <td>$${s.totalOwed.toFixed(2)}</td>
-                        <td>$${s.paidAmount.toFixed(2)}</td>
+                        <td>${getCurrency()}${s.totalOwed.toFixed(2)}</td>
+                        <td>${getCurrency()}${s.paidAmount.toFixed(2)}</td>
                         <td class="${balanceClass}">${balanceText}</td>
                         <td style="text-align:center;">${actionHtml}</td>
                     </tr>
@@ -709,22 +972,8 @@
             container.innerHTML = html;
         }
         
-        async function markPaid(billId, userId) {
-            if(!confirm("Mark this debt as settled?")) return;
-            try {
-                const res = await fetch(`${API.splits}/${billId}/settle/${userId}`, { method: 'POST' });
-                const split = await res.json();
-                renderSplit(split);
-            } catch(e) {
-                alert("Failed to settle debt");
-            }
-        }
-
-        // Init
-        loadUsers();
-        loadGroups();
-        loadBills(); // Load existing bills
-        addBillItemRow(); 
+        // REMOVED OLD INIT - Handled in window.onload
+ 
 
     </script>
 </body>
