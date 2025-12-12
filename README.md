@@ -1,82 +1,67 @@
-# FairFare
+# FairFare 💸
 
-**FairFare** is a scalable, decoupled microservices architecture for managing shared expenses, bill splitting, and debt visualization. The system uses Spring Boot microservices with MongoDB for data persistence, Eureka for service discovery, and an API Gateway for centralized request routing.
+> A robust, microservices-based bill splitting platform built with Spring Cloud.
 
-## Architecture
+## 📖 Overview
+FairFare is a distributed application designed to simplify shared expense management. Built on a scalable **Spring Boot** microservices architecture, it handles everything from user management to complex debt calculation and bill splitting.
 
-The system consists of five main microservices:
+Similar to enterprise-grade systems, FairFare decouples its logic into specialized services to ensure scalability and maintainability.
 
-1.  **Eureka Server** (Port 8761) - Service Registry & Discovery.
-2.  **API Gateway** (Port 3081) - Centralized Entry Point & Request Routing.
-3.  **User Service** (Port 3001) - Manages User Profiles and Groups.
-4.  **Billing Service** (Port 3003) - Handles Bill Creation and Persistence.
-5.  **Splitter Service** (Port 3002) - Calculates Debt Shares, "Paid By" Logic, and Split Distributions.
+## 🚀 Key Features
+*   **Microservices Architecture**: Fully decoupled services using **Netflix Eureka** for discovery and **Spring Cloud Gateway** for routing.
+*   **Smart Splitting Engine**: Supports itemized splitting calculations to determine exactly who owes what based on consumption.
+*   **Debt Tracking**: automatically calculates net balances ("Who owes who") and tracks settlement status.
+*   **Visual Analytics**: Dynamic visualization of cost distribution among group members.
+*   **Experimental OCR**: Basic support for scanning receipt images to auto-populate bill items *(currently optimized for specific receipt formats)*.
+*   **Developer Experience**: Automated PowerShell scripts for one-click startup and testing.
 
-## Technology Stack
+## 🛠️ Technology Stack
+*   **Core**: Java 17, Spring Boot 3.x
+*   **Cloud Native**: Spring Cloud Netflix Eureka, Spring Cloud Gateway
+*   **Database**: MongoDB
+*   **Frontend**: Vanilla JavaScript (ES6+), CSS3 (Glassmorphism design)
+*   **Testing**: JUnit 5, Mockito
 
--   **Spring Boot 3.3.x** - Application framework
--   **Spring Cloud 2023.x** - Microservices framework
--   **Netflix Eureka** - Service discovery
--   **Spring Cloud Gateway** - API Gateway
--   **Spring Data MongoDB** - Data persistence
--   **OpenFeign** - Inter-service communication
--   **Maven** - Build tool
--   **Vanilla JS / CSS** - Responsive Frontend & Visualization
-
-## Project Structure
-
+## 📂 Project Structure
 ```bash
 FairFare/
- ├── eureka-server/    # Service Registry
- ├── gateway-service/  # API Gateway & Static UI
- ├── user-service/     # User & Group Management
- ├── billing-service/  # Bill Management
- ├── splitter-service/ # Split Logic & Debt Calculation
- └── setup.ps1         # Orchestration Script
+├── discovery-service/     # Service Registry (Eureka)
+├── gateway-service/       # API Gateway & UI Static Resources
+├── user-service/          # User & Group Management
+├── billing-service/       # Bill Persistence & Management
+├── splitter-service/      # Splitting Logic & Debt Calculation
+└── setup.ps1              # ⚡ Automation Script
 ```
 
-## Key Features
-
--   **🎯 Microservices Architecture**: Independently deployable services for separate concerns.
--   **🔄 Service Discovery**: Dynamic registration of services via Eureka.
--   **🚪 Centralized API Gateway**: Single entry point for all frontend requests.
--   **💾 Independent Data Stores**: Each service manages its own MongoDB collection context.
--   **📊 Smart Split Logic**: Algorithms to handle "Item-Based" calculation versus simple equal splitting.
--   **🎨 Visual Data Representation**: Frontend visualizers for debt distribution and payment status.
--   **🧾 Receipt Parsing Utility**: Basic text extraction for standard receipt formats to accelerate data entry.
-
-## Getting Started
+## 🏁 Getting Started
 
 ### Prerequisites
+*   Java 17+
+*   MongoDB (running locally on port 27017 or configured via `.env`)
 
--   **Java 17+**
--   **Maven**
--   **MongoDB** (Local or Atlas)
+### ⚡ Quick Start (The Easy Way)
+We provide a powerful automation script to handle the entire lifecycle of the application.
 
-### Installation & Running
-
-1.  **Configure Environment**:
-    Ensure your `.env` file lists your MongoDB credentials and port configurations.
-
-2.  **Start Services**:
-    Use the provided PowerShell script to build and launch all services in the correct order.
+1.  **Start All Services**:
     ```powershell
     .\setup.ps1 -Run
     ```
+    This will:
+    *   Load environment variables from `.env`.
+    *   Launch Eureka, User, Billing, Splitter, and Gateway services in the correct order.
+    *   Wait for port readiness.
 
-3.  **Access the Application**:
-    Navigate to `http://localhost:3081`
+2.  **Access the App**:
+    Open [http://localhost:3081](http://localhost:3081) in your browser.
 
-## API Endpoints
+3.  **Stop Services**:
+    ```powershell
+    .\setup.ps1 -Stop
+    ```
 
-| Service | Method | Endpoint | Description |
-| :--- | :--- | :--- | :--- |
-| **User** | GET | `/users` | List all users |
-| **User** | POST | `/groups` | Create a new group |
-| **Billing** | POST | `/bills` | Create a new bill with item details |
-| **Splitter** | GET | `/splits/{billId}` | Get calculated split result |
-| **Splitter** | POST | `/splits/{billId}/settle/{userId}` | Mark a user's share as paid |
+### 🧪 Running Tests
+To run the full suite of unit and integration tests across all microservices:
+```powershell
+.\run_tests.ps1
+```
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
