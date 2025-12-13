@@ -1114,14 +1114,20 @@
                      actionHtml = '<span style="color:var(--success); font-weight:bold;">✓ PAID</span>';
                      balanceText = `<span style="text-decoration: line-through; opacity: 0.6;">${balanceText}</span> <span style="color:var(--success)"> (Settled)</span>`;
                      balanceClass = ''; 
-                } else if (!isOwed && s.netBalance > 0.01) { 
-                     // Active Debtor
-                     if (isViewerAuthorized) {
-                         actionHtml = `<button class="secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="markPaid('${split.billId}', '${s.userId}')">Mark Paid</button>`;
-                     } else if (!currentUser) {
-                         actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">(Select User)</span>`;
-                     }
-                }
+                 } else if (!isOwed && s.netBalance > 0.01) { 
+                      // Active Debtor
+                      // Check if this debtor specifically owes the Current User
+                      const owesCurrentUser = debts.some(d => d.from === s.userId && d.to === currentUser);
+                      
+                      if (owesCurrentUser) {
+                          actionHtml = `<button class="secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="markPaid('${split.billId}', '${s.userId}')">Mark Paid</button>`;
+                      } else if (!currentUser) {
+                          actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">(Select User)</span>`;
+                      } else {
+                          // Authenticated but not the creditor for this specific user
+                          actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">-</span>`;
+                      }
+                 }
 
                 html += `
                     <tr>
