@@ -972,6 +972,26 @@
             container.innerHTML = html;
         }
         
+        // --- ACTIONS ---
+        async function markPaid(billId, userId) {
+            if(!confirm("Confirm that this user has paid you back?")) return;
+            
+            try {
+                // Call Endpoint: POST /splits/{billId}/settle/{userId}
+                const res = await fetch(`${API.splits}/${billId}/settle/${userId}`, { method: 'POST' });
+                
+                if(res.ok) {
+                    // Refresh the view
+                    getSplit();
+                } else {
+                    alert("Failed to mark as paid. Server error.");
+                }
+            } catch(e) {
+                console.error("Mark paid failed", e);
+                alert("Network error.");
+            }
+        }
+        
         // REMOVED OLD INIT - Handled in window.onload
  
 
