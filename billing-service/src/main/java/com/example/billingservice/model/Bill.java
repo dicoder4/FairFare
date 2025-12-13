@@ -4,7 +4,9 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Document(collection = "bills")
 public class Bill {
@@ -14,7 +16,19 @@ public class Bill {
 
     private String groupId;
     private String createdByUserId;
-    private String paidByUserId;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("payers")
+    private Map<String, Double> payers = new HashMap<>();
+
+    public Map<String, Double> getPayers() {
+        return payers;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("payers")
+    public void setPayers(Map<String, Double> payers) {
+        System.out.println("DEBUG: setPayers called with " + payers); // DEBUG LOG
+        this.payers = payers;
+    }
 
     private double subtotal;
     private double tax;
@@ -50,14 +64,6 @@ public class Bill {
 
     public void setCreatedByUserId(String createdByUserId) {
         this.createdByUserId = createdByUserId;
-    }
-
-    public String getPaidByUserId() {
-        return paidByUserId;
-    }
-
-    public void setPaidByUserId(String paidByUserId) {
-        this.paidByUserId = paidByUserId;
     }
 
     public double getSubtotal() {
@@ -106,5 +112,14 @@ public class Bill {
 
     public void setItems(List<BillItem> items) {
         this.items = items;
+    }
+
+    @Override
+    public String toString() {
+        return "Bill{" +
+                "id='" + id + '\'' +
+                ", payers=" + payers +
+                ", total=" + total +
+                '}';
     }
 }

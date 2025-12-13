@@ -295,10 +295,20 @@
             
             <div class="grid-2">
                 <div class="form-group">
-                    <label>Payer (Who paid?)</label>
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Payer(s)</span>
+                        <a href="#" onclick="toggleMultiPay(event)" id="multiPayToggle" style="font-size:0.8rem; color:var(--accent); text-decoration:none;">Switch to Multi-Pay</a>
+                    </label>
+                    
+                    <!-- Single Payer Mode -->
                     <select id="billPayer">
                         <option value="">Select Group First</option>
                     </select>
+
+                    <!-- Multi Payer Mode -->
+                    <div id="multiPayerContainer" style="display:none; margin-top:0.5rem; background:rgba(0,0,0,0.2); padding:0.8rem; border-radius:6px;">
+                        <!-- Injected via JS -->
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Tax (<span class="currency-label">₹</span>)</label>
@@ -353,6 +363,16 @@
         let allGroupsMap = {}; // Map<ID, Name>
         let selectedUserIdsForGroup = new Set();
         let currentGroupMembers = [];
+        let currentUser = null; // Simulating logged in user
+
+        function updateCurrentUser() {
+            const val = document.getElementById('viewingAsSelector').value;
+            currentUser = val || null;
+            // Refresh split view if open
+            if(document.getElementById('billSelect').value) {
+                getSplit();
+            }
+        }
         
         // Currency State
         let currentCurrency = "INR";
@@ -391,11 +411,16 @@
                  container.style.marginBottom = '1rem';
                  container.innerHTML = `
                     <select id="currencySelector" onchange="toggleCurrency()" 
-                            style="width:auto; display:inline-block; padding:5px; background:var(--card-bg);">
+                            style="width:auto; display:inline-block; padding:5px; background:var(--card-bg); margin-right:10px;">
                         <option value="INR" selected>INR (₹)</option>
                         <option value="USD">USD ($)</option>
                         <option value="EUR">EUR (€)</option>
                         <option value="GBP">GBP (£)</option>
+                    </select>
+
+                    <select id="viewingAsSelector" onchange="updateCurrentUser()" 
+                            style="width:auto; display:inline-block; padding:5px; background:var(--card-bg); border:1px solid var(--accent);">
+                        <option value="">-- Who are you? --</option>
                     </select>
                  `;
                  header.after(container);
@@ -417,6 +442,18 @@
                 const res = await fetch(API.users);
                 allUsers = await res.json();
                 renderUsersList();
+                
+                // Populate Viewing As
+                const sel = document.getElementById('viewingAsSelector');
+                if(sel) {
+                    sel.innerHTML = '<option value="">-- Who are you? --</option>';
+                    allUsers.forEach(u => {
+                        const opt = document.createElement('option');
+                        opt.value = u.id;
+                        opt.text = "Viewing as: " + u.name;
+                        sel.appendChild(opt);
+                    });
+                }
             } catch (e) {
                 console.error("Failed to load users", e);
             }
@@ -580,6 +617,28 @@
             }
         }
 
+        let isMultiPay = false;
+
+        function toggleMultiPay(e) {
+            e.preventDefault();
+            isMultiPay = !isMultiPay;
+            
+            const toggleBtn = document.getElementById('multiPayToggle');
+            const singleSelect = document.getElementById('billPayer');
+            const multiContainer = document.getElementById('multiPayerContainer');
+            
+            if (isMultiPay) {
+                toggleBtn.innerText = "Switch to Single-Pay";
+                singleSelect.style.display = 'none';
+                multiContainer.style.display = 'block';
+                renderMultiPayInputs();
+            } else {
+                toggleBtn.innerText = "Switch to Multi-Pay";
+                singleSelect.style.display = 'block';
+                multiContainer.style.display = 'none';
+            }
+        }
+
         function renderPayerSelect() {
             const select = document.getElementById('billPayer');
             select.innerHTML = '<option value="">Select Payer</option>';
@@ -588,6 +647,32 @@
                 opt.value = u.id;
                 opt.text = u.name;
                 select.appendChild(opt);
+            });
+            
+            if(isMultiPay) renderMultiPayInputs();
+        }
+
+        function renderMultiPayInputs() {
+            const container = document.getElementById('multiPayerContainer');
+            container.innerHTML = '';
+            
+            if(currentGroupMembers.length === 0) {
+                container.innerHTML = '<div style="color:var(--text-muted); font-size:0.8rem;">Select a group first</div>';
+                return;
+            }
+
+            currentGroupMembers.forEach(u => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.marginBottom = '8px';
+                
+                row.innerHTML = `
+                    <span style="font-size:0.9rem; width:40%;">${u.name}</span>
+                    <input type="number" class="multi-payer-input" data-uid="${u.id}" placeholder="0.00" style="width:55%; padding:5px;">
+                `;
+                container.appendChild(row);
             });
         }
 
@@ -634,7 +719,8 @@
             const payerId = document.getElementById('billPayer').value;
             const tax = parseFloat(document.getElementById('billTax').value) || 0;
             
-            if(!groupId || !payerId) return alert("Group and Payer required");
+            if(!groupId) return alert("Group required");
+            if(!isMultiPay && !payerId) return alert("Payer required");
 
             const itemRows = document.querySelectorAll('.item-row');
             const items = [];
@@ -657,10 +743,42 @@
 
             if(items.length === 0) return alert("Add at least one valid item");
 
+            // --- PAYER LOGIC ---
+            let payers = {};
+            
+            // Calculate Bill Total first (Items + Tax)
+            // Use unitPrice (or totalPrice if available). 
+            // In creation logic, we only set unitPrice.
+            const subtotal = items.reduce((sum, i) => sum + (i.unitPrice || 0), 0);
+            const totalBill = subtotal + tax; 
+            
+            console.log("Creating Bill Payload. Payers:", payers, "Items:", items); // DEBUG
+            
+            if (isMultiPay) {
+                // Gather inputs
+                const inputs = document.querySelectorAll('.multi-payer-input');
+                let inputTotal = 0;
+                inputs.forEach(inp => {
+                    const val = parseFloat(inp.value) || 0;
+                    if(val > 0) {
+                        payers[inp.dataset.uid] = val;
+                        inputTotal += val;
+                    }
+                });
+                
+                if (Math.abs(inputTotal - totalBill) > 0.05) {
+                    return alert(`Multi-Pay mismatch! Total Bill: ${getCurrency()}${totalBill.toFixed(2)}, but Paid: ${getCurrency()}${inputTotal.toFixed(2)}`);
+                }
+            } else {
+                // Single Payer
+                if(!payerId) return alert("Select a Payer");
+                payers[payerId] = totalBill;
+            }
+
             const payload = {
                 groupId,
-                createdByUserId: payerId, // Usually same as payer for simple flow
-                paidByUserId: payerId,
+                createdByUserId: isMultiPay ? (Object.keys(payers)[0] || 'unknown') : payerId, 
+                payers: payers, 
                 tax,
                 serviceCharge: 0,
                 tip: 0,
@@ -918,6 +1036,49 @@
                 }
             });
 
+            // RBAC: Check if viewer is authorized (Creditor/Payer)
+            // RBAC: Check if viewer is authorized (Creditor/Payer)
+            let isViewerAuthorized = false;
+            if (currentUser) {
+                const viewerShare = split.userShares.find(u => u.userId === currentUser);
+                // Authorized if I paid something OR if I am owed money
+                if (viewerShare && (viewerShare.paidAmount > 0.01 || viewerShare.netBalance < -0.01)) {
+                    isViewerAuthorized = true;
+                }
+            }
+
+            // --- DEBT SIMPLIFICATION ---
+            // Who owes whom?
+            let debts = []; // { from: userId, to: userId, amount: double }
+            let debtors = split.userShares.filter(s => s.netBalance > 0.01).map(s => ({...s}));
+            let creditors = split.userShares.filter(s => s.netBalance < -0.01).map(s => ({...s, netBalance: Math.abs(s.netBalance)}));
+            
+            let creditorIdx = 0;
+            debtors.forEach(debtor => {
+                let amountToSettle = debtor.netBalance;
+                
+                while (amountToSettle > 0.01 && creditorIdx < creditors.length) {
+                    let creditor = creditors[creditorIdx];
+                    let canTake = Math.min(amountToSettle, creditor.netBalance);
+                    
+                    debts.push({ from: debtor.userId, to: creditor.userId, amount: canTake });
+                    
+                    amountToSettle -= canTake;
+                    creditor.netBalance -= canTake;
+                    
+                    if (creditor.netBalance < 0.01) {
+                        creditorIdx++;
+                    }
+                }
+            });
+            
+            // Helper to get debt text for a user
+            const getDebtText = (uid) => {
+                const myDebts = debts.filter(d => d.from === uid);
+                if (myDebts.length === 0) return "";
+                return myDebts.map(d => `Pays ${getName(d.to)} ${getCurrency()}${d.amount.toFixed(2)}`).join("<br>");
+            };
+
             split.userShares.forEach(s => {
                 const isOwed = s.netBalance < 0;
                 let balanceClass = isOwed ? 'negative' : 'positive';
@@ -925,24 +1086,25 @@
 
                 if (isOwed) {
                     // CREDITOR LOGIC
-                    const myShare = Math.abs(s.netBalance);
-                    const ratio = totalCredit > 0 ? (myShare / totalCredit) : 0;
-                    const reimbursed = totalSettled * ratio;
-                    const remaining = myShare - reimbursed;
-
-                    if (remaining < 0.01) {
-                         balanceText = `<span style="color:var(--success); font-weight:bold;">All Settled</span>`;
-                         balanceClass = '';
-                    } else {
-                         balanceText = `Is Owed ${getCurrency()}${remaining.toFixed(2)}`;
-                         if (reimbursed > 0.01) {
-                             balanceText += ` <span style="font-size:0.8rem; color:var(--text-muted)">(${getCurrency()}${reimbursed.toFixed(2)} rec'd)</span>`;
-                         }
-                    }
+                    balanceText = `<span style="color:var(--success)">Receives ${getCurrency()}${Math.abs(s.netBalance).toFixed(2)}</span>`;
+                     
+                    // Optional: Show re-imbursement status if needed, but keeping it simple for now
+                     if (s.settled) {
+                        balanceText += ` <span style="font-weight:bold;">(Settled)</span>`;
+                     }
 
                 } else {
                     // DEBTOR LOGIC
-                    balanceText = `Owes ${getCurrency()}${s.netBalance.toFixed(2)}`;
+                    // Use calculated precise debts
+                    const debtDetails = getDebtText(s.userId);
+                    if (debtDetails) {
+                        balanceText = `<span style="font-size:0.85rem;">${debtDetails}</span>`;
+                    } else if (s.netBalance < 0.01) {
+                        balanceText = `<span style="color:var(--text-muted)">Settled</span>`;
+                    } else {
+                        // Fallback
+                        balanceText = `Owes ${getCurrency()}${s.netBalance.toFixed(2)}`;
+                    }
                 }
                 
                 // Button / Settled Status Logic for Debtors
@@ -954,7 +1116,11 @@
                      balanceClass = ''; 
                 } else if (!isOwed && s.netBalance > 0.01) { 
                      // Active Debtor
-                     actionHtml = `<button class="secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="markPaid('${split.billId}', '${s.userId}')">Mark Paid</button>`;
+                     if (isViewerAuthorized) {
+                         actionHtml = `<button class="secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="markPaid('${split.billId}', '${s.userId}')">Mark Paid</button>`;
+                     } else if (!currentUser) {
+                         actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">(Select User)</span>`;
+                     }
                 }
 
                 html += `

@@ -15,7 +15,24 @@ public class BillService {
     private BillRepository billRepository;
 
     public Bill createBill(Bill bill) {
+        System.out.println("Processing Create Bill: " + bill);
+        if (bill.getPayers() != null) {
+             System.out.println("Payers Map: " + bill.getPayers());
+        } else {
+             System.out.println("Payers Map is NULL");
+        }
+
         calculateTotals(bill);
+        
+        // Validation: Sum of payers must match Total
+        if (bill.getPayers() != null && !bill.getPayers().isEmpty()) {
+            double paidTotal = bill.getPayers().values().stream().mapToDouble(Double::doubleValue).sum();
+            // Allow 1.0 diff for float precision
+            if (Math.abs(paidTotal - bill.getTotal()) > 1.0) {
+                 System.err.println("Validation Error: Bill Total " + bill.getTotal() + " != Paid " + paidTotal);
+            }
+        }
+        
         return billRepository.insert(bill);
     }
 

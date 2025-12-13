@@ -16,6 +16,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +43,11 @@ class SplitServiceTest {
         mockBill = new Bill();
         mockBill.setId("b1");
         mockBill.setGroupId("g1");
-        mockBill.setPaidByUserId("alice");
+        
+        Map<String, Double> payers = new HashMap<>();
+        payers.put("alice", 110.0);
+        mockBill.setPayers(payers);
+        
         mockBill.setTax(10.0);
         mockBill.setTip(0.0);
         mockBill.setServiceCharge(0.0);

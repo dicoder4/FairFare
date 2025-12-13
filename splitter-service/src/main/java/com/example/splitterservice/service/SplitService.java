@@ -68,9 +68,10 @@ public class SplitService {    @Autowired
 
             double totalOwed = userSubtotal + taxShare + serviceShare + tipShare;
             
+            // Calculate how much this user PAID
             double paidAmount = 0.0;
-            if (userId.equals(bill.getPaidByUserId())) {
-                paidAmount = bill.getTotal();
+            if (bill.getPayers() != null) {
+                paidAmount = bill.getPayers().getOrDefault(userId, 0.0);
             }
             
             // Positive balance = You Owe. Negative balance = You are Owed.
