@@ -311,6 +311,10 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>Bill Date</label>
+                    <input type="date" id="billDate">
+                </div>
+                <div class="form-group">
                     <label>Tax (<span class="currency-label">₹</span>)</label>
                     <input type="number" id="billTax" value="0">
                 </div>
@@ -333,18 +337,26 @@
             <div id="billStatus" class="status-msg"></div>
         </div>
 
-        <!-- STEP 4: RESULTS -->
-        <div class="card">
-            <h2>4. Split Results</h2>
-            <div class="form-group">
-                <label>Select Bill</label>
-                <select id="billSelect" onchange="getSplit()">
-                    <option value="">-- Select a Bill --</option>
-                </select>
-            </div>
-            
-            <div id="splitResult"></div>
+<!-- STEP 4: RESULTS -->
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>4. Split Results</h2>
+        <div id="splitDateDisplay"
+             style="font-size:0.85rem; color:var(--text-muted);">
+            <!-- Date injected here -->
         </div>
+    </div>
+
+    <div class="form-group">
+        <label>Select Bill</label>
+        <select id="billSelect" onchange="getSplit()">
+            <option value="">-- Select a Bill --</option>
+        </select>
+    </div>
+
+    <div id="splitResult"></div>
+</div>
+
 
     </div>
 
@@ -361,6 +373,7 @@
         // State
         let allUsers = [];
         let allGroupsMap = {}; // Map<ID, Name>
+        let allBillsMap = {}; // Map<ID, Bill>
         let selectedUserIdsForGroup = new Set();
         let currentGroupMembers = [];
         let currentUser = null; // Simulating logged in user
@@ -490,6 +503,7 @@
             try {
                 const res = await fetch(API.bills);
                 const bills = await res.json();
+                console.log("Loaded bills:", bills); // DEBUG: Check if date is present
                 const select = document.getElementById('billSelect');
 
                 // Keep selection if possible? No, simplifying
@@ -498,11 +512,14 @@
 
                 const cur = getCurrency();
 
+                allBillsMap = {}; // Reset map
                 bills.forEach(b => {
+                    allBillsMap[b.id] = b; // Store for lookup
                     const opt = document.createElement('option');
                     opt.value = b.id;
                     const groupName = allGroupsMap[b.groupId] ? `[${allGroupsMap[b.groupId]}]` : '';
-                    opt.text = `Bill #${b.id.substr(-6)} (${cur}${b.total}) - ${groupName}`;
+                    const dateStr = b.date ? ` | ${b.date}` : '';
+                    opt.text = `Bill #${b.id.substr(-6)} (${cur}${b.total}) ${groupName}${dateStr}`;
                     select.appendChild(opt);
                 });
                 
@@ -718,6 +735,15 @@
             const groupId = document.getElementById('groupSelect').value;
             const payerId = document.getElementById('billPayer').value;
             const tax = parseFloat(document.getElementById('billTax').value) || 0;
+            let billDate = document.getElementById('billDate').value; // Get Date
+            
+            console.log("Captured Bill Date from Input:", billDate); // DEBUG
+
+            if (!billDate) {
+                // Fallback to today if empty
+                billDate = new Date().toISOString().split('T')[0];
+                console.log("Date empty, defaulting to today:", billDate); // DEBUG
+            }
             
             if(!groupId) return alert("Group required");
             if(!isMultiPay && !payerId) return alert("Payer required");
@@ -780,10 +806,13 @@
                 createdByUserId: isMultiPay ? (Object.keys(payers)[0] || 'unknown') : payerId, 
                 payers: payers, 
                 tax,
+                date: billDate, // Include Date in payload
                 serviceCharge: 0,
                 tip: 0,
                 items
             };
+
+            console.log("Sending Bill Payload:", JSON.stringify(payload, null, 2)); // DEBUG
 
             try {
                 const res = await fetch(API.bills, {
@@ -798,10 +827,14 @@
                 status.className = "status-msg status-success";
                 
                 // Add to Bill Select
+                allBillsMap[bill.id] = bill; // Store new bill
                 const select = document.getElementById('billSelect');
                 const opt = document.createElement('option');
                 opt.value = bill.id;
-                opt.text = `Bill #${bill.id.substr(-6)} ($${bill.total})`;
+                const cur = getCurrency();
+                const groupName = allGroupsMap[bill.groupId] ? `[${allGroupsMap[bill.groupId]}]` : '';
+                const dateStr = bill.date ? ` | ${bill.date}` : '';
+                opt.text = `Bill #${bill.id.substr(-6)} (${cur}${bill.total}) ${groupName}${dateStr}`;
                 select.appendChild(opt);
                 
             } catch(e) {
@@ -844,7 +877,15 @@
                         setTimeout(() => taxInput.style.backgroundColor = 'var(--input-bg)', 1000);
                     }
 
-                    status.innerText = `Success! Found ${result.items.length} items & $${result.totalTax.toFixed(2)} Tax.`;
+                    // Auto-fill Date if found
+                    if (result.billDate) {
+                        const dateInput = document.getElementById('billDate');
+                        dateInput.value = result.billDate; // Expecting YYYY-MM-DD
+                        dateInput.style.backgroundColor = '#10b98120';
+                        setTimeout(() => dateInput.style.backgroundColor = 'var(--input-bg)', 1000);
+                    }
+
+                    status.innerText = `Success! Found ${result.items.length} items, ${result.totalTax.toFixed(2)} Tax & Date: ${result.billDate || 'Not found'}.`;
                     status.style.color = 'var(--success)';
                 } else {
                     status.innerText = "No clear items found using the new format (Qty Name Rate Amount).";
@@ -862,14 +903,41 @@
             const lines = text.split('\n');
             const items = [];
             let totalTax = 0;
+            let billDate = null;
+            
+            // Helper to fix OCR number issues (e.g. "4000" -> 40.00, "40 00" -> 40.00)
+            const normalizePrice = (str) => {
+                if (!str) return 0;
+                // 1. Replace space/comma with dot if it looks like a separator
+                // Regex: match space/comma followed by exactly 2 digits at the end
+                let clean = str.replace(/[,\s](\d{2})$/, '.$1');
+                
+                let val = parseFloat(clean);
+                
+                // 2. Heuristic: If huge integer (missing dot), divide by 100
+                // e.g. 4000 -> 40.00, 2750 -> 27.50
+                if (val > 100 && !str.includes('.') && !str.includes(',')) {
+                    // If it ends in 00, 50, 25, 75 (common currency endings)
+                    if (/00$|50$|25$|75$/.test(str)) {
+                        return val / 100;
+                    }
+                }
+                return val;
+            };
             
             // 1. Regex for Items: "2 Coffee 200.00 400.00"
             // Captures: 1=Qty, 2=Name, 3=UnitRate, 4=TotalAmount
-            const itemRegex = /^(\d+)\s+([a-zA-Z\s]+)\s+(\d+\.?\d{0,2})\s+(\d+\.?\d{0,2})/;
+            // Updated to allow space/comma as decimal separator
+            const itemRegex = /^(\d+)\s+([a-zA-Z\s]+)\s+(\d+(?:[.,\s]\d{2})?)\s+(\d+(?:[.,\s]\d{2})?)/;
             
             // 2. Regex for Tax: "CGST: 5% 20.00" or "Tax 5.00"
-            // Looks for keywords and ends with a number
-            const taxRegex = /(CGST|SGST|IGST|GST|TAX|VAT)[\s\w%:.]*?(\d+\.?\d{2})$/i;
+            // Matches: Keyword -> optional colon/space -> optional percentage -> Amount
+            // Added negative lookahead (?!\s*%) to avoid capturing "5" from "5%"
+            const taxRegex = /(?:CGST|SGST|IGST|GST|TAX|VAT)[\s\w%:.]*?(\d+(?:[.,\s]\d{2})?)(?!\s*%)/i;
+
+            // 3. Regex for Date: "Date: Aug 13, 2025"
+            // Matches: "Date:" (optional) -> Month Name -> Day -> Year
+            const dateRegex = /(?:Date|Dt)?[:\s]*([A-Za-z]{3}\s+\d{1,2},?\s+\d{4})/i;
 
             lines.forEach(line => {
                 const trimmed = line.trim();
@@ -879,8 +947,8 @@
                 if (itemMatch) {
                     const qty = itemMatch[1];
                     const name = itemMatch[2].trim();
-                    // const rate = parseFloat(itemMatch[3]); 
-                    const total = parseFloat(itemMatch[4]);
+                    // const rate = normalizePrice(itemMatch[3]); 
+                    const total = normalizePrice(itemMatch[4]);
                     
                     // Use Qty in name for clarity "Coffee (x2)"
                     const displayName = `${name} (x${qty})`;
@@ -896,15 +964,31 @@
                 if (!trimmed.toUpperCase().startsWith("TOTAL") && !trimmed.toUpperCase().startsWith("SUB")) {
                     const taxMatch = trimmed.match(taxRegex);
                     if (taxMatch) {
-                        const taxAmount = parseFloat(taxMatch[2]);
+                        const taxAmount = normalizePrice(taxMatch[1]); 
                         if (taxAmount > 0) {
                             totalTax += taxAmount;
                         }
                     }
                 }
+
+                // --- DATE PARSING ---
+                if (!billDate) {
+                    const dateMatch = trimmed.match(dateRegex);
+                    if (dateMatch) {
+                        const dateStr = dateMatch[1];
+                        const dateObj = new Date(dateStr);
+                        if (!isNaN(dateObj)) {
+                            // Format to YYYY-MM-DD for input[type=date]
+                            // Adjust for timezone offset to avoid date shifting
+                            const offset = dateObj.getTimezoneOffset();
+                            const localDate = new Date(dateObj.getTime() - (offset*60*1000));
+                            billDate = localDate.toISOString().split('T')[0];
+                        }
+                    }
+                }
             });
 
-            return { items, totalTax };
+            return { items, totalTax, billDate };
         }
 
         function populateBillItems(items) {
@@ -924,7 +1008,7 @@
                             <input type="text" class="item-name" value="${item.name}">
                         </div>
                         <div class="form-group">
-                            <label>Cost ($ total)</label>
+                            <label>Cost (total)</label>
                             <input type="number" class="item-cost" value="${item.price.toFixed(2)}">
                         </div>
                     </div>
@@ -940,18 +1024,29 @@
         }
 
         // --- SPLITS ---
-        async function getSplit() {
-            const billId = document.getElementById('billSelect').value;
-            if(!billId) return;
+async function getSplit() {
+    const billId = document.getElementById('billSelect').value;
+    if(!billId) return;
 
-            try {
-                const res = await fetch(`${API.splits}/${billId}`);
-                const split = await res.json();
-                renderSplit(split);
-            } catch(e) {
-                console.error(e);
-            }
-        }
+    // 🔹 Get bill date from cached bills
+    const bill = allBillsMap[billId];
+    const dateBox = document.getElementById('splitDateDisplay');
+
+    if (bill && bill.date) {
+        dateBox.innerText = `Bill Date: ${bill.date}`;
+    } else {
+        dateBox.innerText = '';
+    }
+
+    try {
+        const res = await fetch(`${API.splits}/${billId}`);
+        const split = await res.json();
+        renderSplit(split);
+    } catch(e) {
+        console.error(e);
+    }
+}
+
 
         function renderSplit(split) {
             const container = document.getElementById('splitResult');

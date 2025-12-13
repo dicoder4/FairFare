@@ -16,7 +16,8 @@ public class Bill {
 
     private String groupId;
     private String createdByUserId;
-    
+    private String date; // YYYY-MM-DD
+
     @com.fasterxml.jackson.annotation.JsonProperty("payers")
     private Map<String, Double> payers = new HashMap<>();
 
@@ -64,6 +65,14 @@ public class Bill {
 
     public void setCreatedByUserId(String createdByUserId) {
         this.createdByUserId = createdByUserId;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
     }
 
     public double getSubtotal() {
