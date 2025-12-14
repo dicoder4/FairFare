@@ -203,7 +203,7 @@
         }
         
         .status-success { background: rgba(16, 185, 129, 0.2); color: #34d399; display: block; }
-        .status-error { background: rgba(239, 68, 68, 0.2); color: #fr8787; display: block; }
+        .status-error { background: rgba(239, 68, 68, 0.2); color: #f87878; display: block; }
 
         /* Split Table */
         .split-table {
@@ -928,7 +928,9 @@
             // 1. Regex for Items: "2 Coffee 200.00 400.00"
             // Captures: 1=Qty, 2=Name, 3=UnitRate, 4=TotalAmount
             // Updated to allow space/comma as decimal separator
-            const itemRegex = /^(\d+)\s+([a-zA-Z\s]+)\s+(\d+(?:[.,\s]\d{2})?)\s+(\d+(?:[.,\s]\d{2})?)/;
+            // Updated Name capture to (.+?) to allow special chars (e.g. &, -) or OCR noise
+            // Updated to allow optional space between Qty and Name (handles merged "1Idli")
+            const itemRegex = /^(\d+)\s*(.+?)\s+(\d+(?:[.,\s]\d{2})?)\s+(\d+(?:[.,\s]\d{2})?)/;
             
             // 2. Regex for Tax: "CGST: 5% 20.00" or "Tax 5.00"
             // Matches: Keyword -> optional colon/space -> optional percentage -> Amount
@@ -945,12 +947,59 @@
                 // --- ITEM PARSING ---
                 const itemMatch = trimmed.match(itemRegex);
                 if (itemMatch) {
-                    const qty = itemMatch[1];
-                    const name = itemMatch[2].trim();
-                    // const rate = normalizePrice(itemMatch[3]); 
-                    const total = normalizePrice(itemMatch[4]);
+                    console.log("OCR Raw Item:", itemMatch[0]); // Debugging
+                    let qty = parseFloat(itemMatch[1]);
+                    let name = itemMatch[2].trim();
+                    const unitPrice = normalizePrice(itemMatch[3]); 
+                    let total = normalizePrice(itemMatch[4]);
+
+                    // 1. Fix Merged Qty/Name (e.g. "11dli" -> Qty 1, Name "Idli")
+                    // If Qty > 1, but Total equals Unit Price (implies Qty 1)
+                    if (qty > 1 && unitPrice > 0 && total > 0) {
+                        const expected = qty * unitPrice;
+                        // If Total matches Unit Price (Qty should be 1), but Qty is > 1
+                        if (Math.abs(total - unitPrice) < 1.0 && Math.abs(expected - total) > 1.0) {
+                             const qtyStr = itemMatch[1];
+                             // If Qty ends with 1, assume it's an 'I' or 'l' from the name
+                             if (qtyStr.endsWith('1')) {
+                                 qty = Math.floor(qty / 10); 
+                                 // If name starts with l or |, remove it to avoid double I (e.g. 11ldli -> Idli)
+                                 name = name.replace(/^[l|1]/, '');
+                                 name = 'I' + name; 
+                             }
+                        }
+                    }
+
+                    // 2. Clean Name
+                    // Replace pipes/bangs with l (common OCR error for l or I)
+                    name = name.replace(/[|!]/g, 'l');
+                    // Replace 1 inside word with l (e.g. Id1i -> Idli)
+                    name = name.replace(/(\w)1(\w)/g, '$1l$2');
                     
-                    // Use Qty in name for clarity "Coffee (x2)"
+                    // Remove trailing noise
+                    name = name.replace(/[~.\-_]+$/, '').trim();
+                    // Remove leading noise (e.g. [ ] )
+                    name = name.replace(/^[\[\]]+/, '').trim();
+                    
+                    // Fix common OCR start errors: 
+                    // "1dli" -> "Idli", "ldli" -> "Idli", "l dli" -> "Idli"
+                    // Replace leading 'l' or '1' with 'I' if followed by a consonant (e.g. ldli -> Idli)
+                    // Also handles space: "l dli" -> "Idli"
+                    if (/^[l1]\s*[b-df-hj-np-tv-z]/.test(name)) {
+                        name = 'I' + name.substring(1).trim();
+                    }
+                    // Special case: "di" -> "Idli" (if I and l are both lost/misread)
+                    // Only if name is very short and looks like "di"
+                    if (/^di$/i.test(name)) {
+                         // Heuristic: If it's just "di", it's likely "Idli"
+                         name = "Idli";
+                    }
+
+                    // 3. Price Correction (Trust Unit Price if Qty is 1)
+                    if (qty === 1 && unitPrice > 0 && Math.abs(unitPrice - total) > 1.0) {
+                        total = unitPrice;
+                    }
+
                     const displayName = `${name} (x${qty})`;
                     
                     if (total > 0) {
