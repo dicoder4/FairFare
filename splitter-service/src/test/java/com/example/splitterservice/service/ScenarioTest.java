@@ -76,7 +76,7 @@ class ScenarioTest {
         double expectedCost = 550.0 / 3.0; // ~183.33
 
         // 2. Verify Alice
-        UserShare alice = result.getUserShares().stream().filter(u -> u.getUserId().equals("alice")).findFirst().orElseThrow();
+        UserShare alice = result.getUserShares().stream().filter(u -> u.getUserId().equals("alice")).findFirst().get();
         assertThat(alice.getTotalOwed()).isCloseTo(expectedCost, org.assertj.core.data.Offset.offset(0.01));
         assertThat(alice.getPaidAmount()).isEqualTo(200.0);
         // Balance: 183.33 - 200 = -16.67 (Negative means Owed money? No, wait.)
@@ -89,21 +89,19 @@ class ScenarioTest {
         assertThat(alice.getNetBalance()).isCloseTo(expectedCost - 200.0, org.assertj.core.data.Offset.offset(0.01));
 
         // 3. Verify Charlie
-        UserShare charlie = result.getUserShares().stream().filter(u -> u.getUserId().equals("charlie")).findFirst().orElseThrow();
+        UserShare charlie = result.getUserShares().stream().filter(u -> u.getUserId().equals("charlie")).findFirst().get();
         assertThat(charlie.getTotalOwed()).isCloseTo(expectedCost, org.assertj.core.data.Offset.offset(0.01));
         assertThat(charlie.getPaidAmount()).isEqualTo(350.0);
         assertThat(charlie.getNetBalance()).isCloseTo(expectedCost - 350.0, org.assertj.core.data.Offset.offset(0.01));
 
         // 4. Verify Bob
-        UserShare bob = result.getUserShares().stream().filter(u -> u.getUserId().equals("bob")).findFirst().orElseThrow();
+        UserShare bob = result.getUserShares().stream().filter(u -> u.getUserId().equals("bob")).findFirst().get();
         assertThat(bob.getTotalOwed()).isCloseTo(expectedCost, org.assertj.core.data.Offset.offset(0.01));
         assertThat(bob.getPaidAmount()).isEqualTo(0.0);
         assertThat(bob.getNetBalance()).isCloseTo(expectedCost, org.assertj.core.data.Offset.offset(0.01)); // Bob Owes full amount
         
         System.out.println("Scenario Validated Successfully!");
     }
-    }
-
     @Test
     void testPartialSettlement() {
         // Given a stored split result where Bob owes money
