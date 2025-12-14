@@ -116,18 +116,20 @@ class SplitServiceTest {
         // Given
         SplitResult initial = new SplitResult();
         initial.setBillId("b1");
-        UserShare bobShare = new UserShare("bob", 50, 5, 0, 0, 55, 0, 55, false);
+        // Update constructor: 9 args. Last is Set<String>
+        UserShare bobShare = new UserShare("bob", 50, 5, 0, 0, 55, 0, 55, new java.util.HashSet<>());
         initial.setUserShares(Collections.singletonList(bobShare));
         
         when(splitResultRepository.findByBillId("b1")).thenReturn(Optional.of(initial));
         when(splitResultRepository.save(any(SplitResult.class))).thenAnswer(i -> i.getArguments()[0]);
 
         // When
-        SplitResult updated = splitService.settleDebt("b1", "bob");
+        // bob pays alice
+        SplitResult updated = splitService.settleDebt("b1", "bob", "alice");
 
         // Then
         UserShare updatedBob = updated.getUserShares().get(0);
-        assertThat(updatedBob.isSettled()).isTrue();
+        assertThat(updatedBob.getSettledWithUserIds()).contains("alice");
         verify(splitResultRepository).save(initial);
     }
 }

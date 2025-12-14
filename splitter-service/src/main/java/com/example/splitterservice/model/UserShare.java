@@ -1,5 +1,7 @@
 package com.example.splitterservice.model;
 
+import java.util.*;
+
 public class UserShare {
 
     private String userId;
@@ -10,7 +12,7 @@ public class UserShare {
     private double totalOwed;
     private double paidAmount;
     private double netBalance;
-    private boolean settled;
+    private Set<String> settledWithUserIds = new HashSet<>();
 
     public UserShare() {}
 
@@ -22,7 +24,7 @@ public class UserShare {
                      double totalOwed,
                      double paidAmount,
                      double netBalance,
-                     boolean settled) {
+                     Set<String> settledWithUserIds) {
         this.userId = userId;
         this.itemsSubtotal = itemsSubtotal;
         this.taxShare = taxShare;
@@ -31,7 +33,7 @@ public class UserShare {
         this.totalOwed = totalOwed;
         this.paidAmount = paidAmount;
         this.netBalance = netBalance;
-        this.settled = settled;
+        this.settledWithUserIds = settledWithUserIds != null ? settledWithUserIds : new HashSet<>();
     }
 
     public String getUserId() {
@@ -98,11 +100,11 @@ public class UserShare {
         this.netBalance = netBalance;
     }
 
-    public boolean isSettled() {
-        return settled;
+    public Set<String> getSettledWithUserIds() {
+        return settledWithUserIds;
     }
 
-    public void setSettled(boolean settled) {
-        this.settled = settled;
+    public void setSettledWithUserIds(Set<String> settledWithUserIds) {
+        this.settledWithUserIds = settledWithUserIds;
     }
 }

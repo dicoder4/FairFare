@@ -1217,61 +1217,65 @@ async function getSplit() {
             });
             
             // Helper to get debt text for a user
-            const getDebtText = (uid) => {
+            const getDebtText = (uid, settledSet) => {
                 const myDebts = debts.filter(d => d.from === uid);
                 if (myDebts.length === 0) return "";
-                return myDebts.map(d => `Pays ${getName(d.to)} ${getCurrency()}${d.amount.toFixed(2)}`).join("<br>");
+                return myDebts.map(d => {
+                    // Check if this specific debt is settled
+                    const isSettled = settledSet && settledSet.includes(d.to);
+                    const style = isSettled ? "text-decoration: line-through; opacity: 0.6;" : "";
+                    const suffix = isSettled ? " <span style='color:var(--success)'>(Paid)</span>" : "";
+                    return `<span style="${style}">Pays ${getName(d.to)} ${getCurrency()}${d.amount.toFixed(2)}</span>${suffix}`;
+                }).join("<br>");
             };
 
             split.userShares.forEach(s => {
                 const isOwed = s.netBalance < 0;
                 let balanceClass = isOwed ? 'negative' : 'positive';
                 let balanceText = '';
+                
+                // Ensure settledWithUserIds is an array
+                const settledSet = s.settledWithUserIds || [];
 
                 if (isOwed) {
                     // CREDITOR LOGIC
                     balanceText = `<span style="color:var(--success)">Receives ${getCurrency()}${Math.abs(s.netBalance).toFixed(2)}</span>`;
-                     
-                    // Optional: Show re-imbursement status if needed, but keeping it simple for now
-                     if (s.settled) {
-                        balanceText += ` <span style="font-weight:bold;">(Settled)</span>`;
-                     }
-
                 } else {
                     // DEBTOR LOGIC
                     // Use calculated precise debts
-                    const debtDetails = getDebtText(s.userId);
+                    const debtDetails = getDebtText(s.userId, settledSet);
                     if (debtDetails) {
                         balanceText = `<span style="font-size:0.85rem;">${debtDetails}</span>`;
                     } else if (s.netBalance < 0.01) {
-                        balanceText = `<span style="color:var(--text-muted)">Settled</span>`;
+                         // Fully settled/balanced by math, but check visual
+                         balanceText = `<span style="color:var(--text-muted)">Settled</span>`;
                     } else {
                         // Fallback
                         balanceText = `Owes ${getCurrency()}${s.netBalance.toFixed(2)}`;
                     }
                 }
                 
-                // Button / Settled Status Logic for Debtors
+                // Button / Status Logic for Debtors
                 let actionHtml = '';
-                if (!isOwed && s.settled) {
-                     // Settled Debtor
-                     actionHtml = '<span style="color:var(--success); font-weight:bold;">✓ PAID</span>';
-                     balanceText = `<span style="text-decoration: line-through; opacity: 0.6;">${balanceText}</span> <span style="color:var(--success)"> (Settled)</span>`;
-                     balanceClass = ''; 
-                 } else if (!isOwed && s.netBalance > 0.01) { 
-                      // Active Debtor
-                      // Check if this debtor specifically owes the Current User
-                      const owesCurrentUser = debts.some(d => d.from === s.userId && d.to === currentUser);
-                      
-                      if (owesCurrentUser) {
-                          actionHtml = `<button class="secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="markPaid('${split.billId}', '${s.userId}')">Mark Paid</button>`;
-                      } else if (!currentUser) {
-                          actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">(Select User)</span>`;
-                      } else {
-                          // Authenticated but not the creditor for this specific user
-                          actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">-</span>`;
-                      }
-                 }
+                if (!isOwed && s.netBalance > 0.01) { 
+                     // Active Debtor
+                     // Check if this debtor specifically owes the Current User
+                     const owesCurrentUser = debts.some(d => d.from === s.userId && d.to === currentUser);
+                     const isSettledWithCurrentUser = settledSet.includes(currentUser);
+
+                     if (owesCurrentUser) {
+                         if (isSettledWithCurrentUser) {
+                             actionHtml = `<span style="color:var(--success); font-weight:bold;">✓ PAID (You)</span>`;
+                         } else {
+                             actionHtml = `<button class="secondary" style="padding:4px 8px; font-size:0.8rem;" onclick="markPaid('${split.billId}', '${s.userId}')">Mark Paid</button>`;
+                         }
+                     } else if (!currentUser) {
+                         actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">(Select User)</span>`;
+                     } else {
+                         // Authenticated but not the creditor for this specific user
+                         actionHtml = `<span style="font-size:0.7rem; color:var(--text-muted)">-</span>`;
+                     }
+                }
 
                 html += `
                     <tr>
@@ -1293,8 +1297,8 @@ async function getSplit() {
             if(!confirm("Confirm that this user has paid you back?")) return;
             
             try {
-                // Call Endpoint: POST /splits/{billId}/settle/{userId}
-                const res = await fetch(`${API.splits}/${billId}/settle/${userId}`, { method: 'POST' });
+                // Call Endpoint: POST /splits/{billId}/settle/{userId}?creditorId={currentUser}
+                const res = await fetch(`${API.splits}/${billId}/settle/${userId}?creditorId=${currentUser}`, { method: 'POST' });
                 
                 if(res.ok) {
                     // Refresh the view

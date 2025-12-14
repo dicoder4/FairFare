@@ -25,7 +25,9 @@ public class SplitController {
     }
 
     @PostMapping("/{billId}/settle/{userId}")
-    public SplitResult settleDebt(@PathVariable String billId, @PathVariable String userId) {
-        return splitService.settleDebt(billId, userId);
+    public SplitResult settleDebt(@PathVariable String billId, 
+                                  @PathVariable String userId,
+                                  @RequestParam(required = false) String creditorId) {
+        return splitService.settleDebt(billId, userId, creditorId);
     }
 }

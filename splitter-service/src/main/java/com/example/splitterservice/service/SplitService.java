@@ -87,7 +87,7 @@ public class SplitService {    @Autowired
                     totalOwed,
                     paidAmount,
                     netBalance,
-                    false // Default: not settled
+                    new HashSet<>() // Not settled with anyone
             );
 
             shares.add(userShare);
@@ -97,16 +97,21 @@ public class SplitService {    @Autowired
         return splitResultRepository.save(result);
     }
     
-    public SplitResult settleDebt(String billId, String userId) {
+    public SplitResult settleDebt(String billId, String debtorUserId, String creditorUserId) {
         SplitResult split = getOrCalculateSplit(billId);
         
         boolean updated = false;
         for (UserShare share : split.getUserShares()) {
-            if (share.getUserId().equals(userId)) {
-                // Toggle settled status or just set to true?
-                // Let's set to true for "Mark Paid".
-                share.setSettled(true);
-                updated = true;
+            if (share.getUserId().equals(debtorUserId)) {
+                // Add creditor to settled list
+                if (share.getSettledWithUserIds() == null) {
+                    share.setSettledWithUserIds(new HashSet<>());
+                }
+                
+                if (creditorUserId != null && !creditorUserId.isEmpty()) {
+                    share.getSettledWithUserIds().add(creditorUserId);
+                    updated = true;
+                }
                 break;
             }
         }

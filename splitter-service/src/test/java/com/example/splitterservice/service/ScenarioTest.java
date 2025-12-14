@@ -102,4 +102,34 @@ class ScenarioTest {
         
         System.out.println("Scenario Validated Successfully!");
     }
+    }
+
+    @Test
+    void testPartialSettlement() {
+        // Given a stored split result where Bob owes money
+        SplitResult storedSplit = new SplitResult();
+        storedSplit.setBillId("settle_bill");
+        
+        // Bob owes 100
+        UserShare bob = new UserShare("bob", 100.0, 0,0,0, 100.0, 0.0, 100.0, new java.util.HashSet<>());
+        storedSplit.setUserShares(Arrays.asList(bob));
+        
+        when(splitResultRepository.findByBillId("settle_bill")).thenReturn(java.util.Optional.of(storedSplit));
+        when(splitResultRepository.save(any(SplitResult.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        // When Bob pays Alice
+        SplitResult result1 = splitService.settleDebt("settle_bill", "bob", "alice");
+        
+        // Then Bob should satisfy Alice
+        UserShare bobAfter1 = result1.getUserShares().get(0);
+        assertThat(bobAfter1.getSettledWithUserIds()).contains("alice");
+        assertThat(bobAfter1.getSettledWithUserIds()).doesNotContain("charlie");
+        
+        // When Bob pays Charlie
+        SplitResult result2 = splitService.settleDebt("settle_bill", "bob", "charlie");
+        
+        // Then Bob should satisfy both
+        UserShare bobAfter2 = result2.getUserShares().get(0);
+        assertThat(bobAfter2.getSettledWithUserIds()).contains("alice", "charlie");
+    }
 }
